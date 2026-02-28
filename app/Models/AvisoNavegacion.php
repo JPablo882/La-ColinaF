@@ -15,4 +15,15 @@ class AvisoNavegacion extends Model
         'motoquero_id',
         'estado'
     ];
+
+    public function cliente()
+    {
+        return $this->belongsTo(\App\Models\Cliente::class);
+    }
+
+    public function pedido()
+    {
+        return $this->belongsTo(\App\Models\Pedido::class);
+    }
+
 }

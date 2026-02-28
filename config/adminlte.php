@@ -302,6 +302,16 @@ return [
         // Navbar items:
         ['header' => 'DATOS DEL SISTEMA'],
 
+
+        [
+            'can' => 'admin.configuracion.index',
+            'text' => 'Notificaciones',
+            'url' => 'admin/notificaciones',
+            'icon' => 'fas fa-bell',
+            'classes' => 'bg-blue text-white',
+        ],
+
+
         [
             'can' => 'admin.configuracion.index',
             'text' => 'Configuración',

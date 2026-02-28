@@ -47,7 +47,7 @@
                 <tr>
                     <td style="text-align:center">{{ $i + 1 }}</td>
                     <td>{{ $cliente->nombre }}</td>
-                    <td>{{ $cliente->celular }}</td>
+                    <td>{{ $cliente->celular_real }}</td>
                     <td>{{ $cliente->direccion }}</td>
 
                     <td>
@@ -112,7 +112,7 @@
 
 {{-- ================= CSS ================= --}}
 @section('css')
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
 <style>
 .selectores select {
     font-size: 0.8rem;
@@ -122,11 +122,22 @@
 
 {{-- ================= JS ================= --}}
 @section('js')
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script async
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async">
+</script>
 
 <script>
 let map;
 let markers = [];
+
+function initMap() {
+
+    map = new google.maps.Map(document.getElementById("mapaClientes"), {
+        center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
+        zoom: 12,
+    });
+}
 
 $(document).ready(function () {
 
@@ -141,36 +152,40 @@ $(document).ready(function () {
         });
     }
 
-    // MAPA
-    map = L.map('mapaClientes').setView([-17.7833, -63.1821], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
     // Checkbox cliente
     $(document).on('change', '.chk-cliente', function () {
 
         const contenedor = $(this).closest('td');
         const selectores = contenedor.find('.selectores');
 
-        const lat = $(this).data('lat');
-        const lng = $(this).data('lng');
+        const lat = parseFloat($(this).data('lat'));
+        const lng = parseFloat($(this).data('lng'));
 
         if (this.checked) {
             selectores.removeClass('d-none');
 
             if (lat && lng) {
-                const marker = L.marker([lat, lng]).addTo(map);
+
+                const marker = new google.maps.Marker({
+                    position: { lat: lat, lng: lng },
+                    map: map
+                });
+
                 markers.push(marker);
-                map.setView([lat, lng], 15);
+
+                map.setCenter({ lat: lat, lng: lng });
+                map.setZoom(15);
             }
 
         } else {
+
             selectores.addClass('d-none');
             selectores.find('select').val('');
             limpiarMapa();
         }
     });
 
-    // Crear pedidos
+    // Crear pedidos (NO se toca)
     $('#btnCrearPedidos').on('click', function () {
 
         let pedidos = [];
@@ -230,7 +245,7 @@ $(document).ready(function () {
 
 // Limpia marcadores
 function limpiarMapa() {
-    markers.forEach(m => map.removeLayer(m));
+    markers.forEach(m => m.setMap(null));
     markers = [];
 }
 </script>

@@ -13,6 +13,8 @@ use App\Models\Producto;
 use App\Models\WhatsAppMessage;   // modelo para mensajes entrantes de WhatsApp
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\AvisoPedido;
+use App\Models\DespachoRepartidor;
 
 use Illuminate\Http\Request;
 
@@ -23,22 +25,51 @@ class PedidoController extends Controller
      */
     public function index(Request $request)
     {
-        $fecha = $request->get('fecha', date('Y-m-d')); // Si no viene fecha, toma hoy
+        $despachosHoy = DespachoRepartidor::whereDate('created_at', today())
+            ->get()
+            ->keyBy('motoquero_id');
+
+        $fecha = $request->get('fecha', date('Y-m-d'));
 
         $pedidos = Pedido::with(['cliente', 'motoquero', 'detalles'])
             ->whereDate('updated_at', $fecha)
-         //   ->orderBy('orden', 'asc')
             ->get();
+
+        // 🔥 PRODUCTOS FIJOS (solo consulta una vez)
+        $productoRegular = Producto::find(1);   // Agua Regular
+        $productoAlcalina = Producto::find(2);  // Agua Alcalina
+
+        foreach ($pedidos as $pedido) {
+
+            if ($pedido->cliente) {
+
+                $cliente = $pedido->cliente;
+
+                // 🔹 Precio Regular
+                $pedido->precio_regular_ref = $cliente->getPrecioProducto($productoRegular);
+
+                // 🔹 Precio Alcalina
+                $pedido->precio_alcalina_ref = $cliente->getPrecioProducto($productoAlcalina);
+
+            } else {
+                $pedido->precio_regular_ref = null;
+                $pedido->precio_alcalina_ref = null;
+            }
+        }
 
         $motoqueros = Motoquero::all();
 
-        $clientes = Cliente::select('id', 'nombre', 'ubicacion_gps', 'latitud', 'longitud' )->get();
+        $clientes = Cliente::select(
+            'id',
+            'nombre',
+            'ubicacion_gps',
+            'latitud',
+            'longitud'
+        )->get();
 
+        $hoyInicio = Carbon::today()->startOfDay();
+        $hoyFin = Carbon::today()->endOfDay();
 
-        $hoyInicio = Carbon::today()->startOfDay();   // 00:00 hoy
-        $hoyFin   = Carbon::today()->endOfDay();      // 23:59:59 hoy
-
-       
         $contactosHoy = WhatsAppMessage::select(
                 'from',
                 DB::raw('MAX(name) as name'),
@@ -49,7 +80,14 @@ class PedidoController extends Controller
             ->orderByDesc('last_at')
             ->get();
 
-        return view('admin.pedidos.index', compact('pedidos', 'motoqueros', 'fecha', 'contactosHoy', 'clientes'));
+        return view('admin.pedidos.index', compact(
+            'pedidos',
+            'motoqueros',
+            'fecha',
+            'contactosHoy',
+            'clientes',
+            'despachosHoy'
+        ));
     }
 
     /**
@@ -779,6 +817,80 @@ public function actualizarEdicion(Request $request)
             'message' => $e->getMessage()
         ], 500);
     }
+}
+
+
+public function avisarMotoquero(Request $request, $pedidoId)
+{
+    $request->validate([
+        'tipo' => 'required|in:ya_sale,no_contesta'
+    ]);
+
+    $pedido = Pedido::findOrFail($pedidoId);
+
+    // Verificar que el pedido tenga motero asignado
+    if (!$pedido->motoquero_id) {
+        return response()->json([
+            'error' => 'El pedido no tiene motero asignado.'
+        ], 400);
+    }
+
+    AvisoPedido::create([
+        'pedido_id' => $pedido->id,
+        'motoquero_id' => $pedido->motoquero_id,
+        'tipo' => $request->tipo,
+        'leido' => false
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Aviso enviado correctamente'
+    ]);
+}
+
+
+public function obtenerAvisosMotoquero()
+{
+    if (!auth()->check() || !auth()->user()->motoquero) {
+        return response()->json([]);
+    }
+
+    $motoqueroId = auth()->user()->motoquero->id;
+
+    $avisos = AvisoPedido::where('motoquero_id', $motoqueroId)
+        ->where('leido', false)
+        ->with('pedido.cliente')
+        ->get();
+
+    if ($avisos->isEmpty()) {
+        return response()->json([]);
+    }
+
+    // Preparar respuesta limpia
+    $respuesta = $avisos->map(function ($aviso) {
+        return [
+            'id' => $aviso->id,
+            'tipo' => $aviso->tipo,
+            'pedido_id' => $aviso->pedido->id,
+            'cliente' => $aviso->pedido->cliente->nombre ?? 'Cliente',
+        ];
+    });
+
+    // Marcar como leídos
+    AvisoPedido::whereIn('id', $avisos->pluck('id'))
+        ->update(['leido' => true]);
+
+    return response()->json($respuesta);
+}
+
+
+public function toggleNotificacion(Request $request, $pedidoId)
+{
+    $pedido = \App\Models\Pedido::findOrFail($pedidoId);
+    $pedido->inicio_navegacion_este_pedido = $request->valor;
+    $pedido->save();
+
+    return response()->json(['ok' => true]);
 }
 
 

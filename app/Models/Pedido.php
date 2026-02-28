@@ -6,6 +6,7 @@ use App\Models\DetallePedido;
 use App\Models\Motoquero;
 use App\Models\Cliente;
 use App\Models\Tarifa;
+use App\Models\AvisoPedido;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 class Pedido extends Model
 {
     protected $table = 'pedidos';
-    protected $fillable = ['cliente_id', 'estado', 'motoquero_id', 'direccion_entrega', 'telefono_contacto', 'observaciones', 'ubicacion_gps', 'ruta', 'metodo_pago', 'total_precio' ];
+    protected $fillable = ['cliente_id', 'estado', 'motoquero_id', 'direccion_entrega', 'telefono_contacto', 'observaciones', 'ubicacion_gps', 'ruta', 'metodo_pago', 'total_precio', 'inicio_navegacion_este_pedido' ];
 
     use HasFactory;
 
@@ -50,6 +51,11 @@ class Pedido extends Model
     {
         return $this->hasOne(MotoqueroUbicacion::class)
             ->latestOfMany('registrado_en');
+    }
+
+    public function avisos()
+    {
+        return $this->hasMany(AvisoPedido::class);
     }
 
 

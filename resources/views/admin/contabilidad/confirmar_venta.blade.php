@@ -167,32 +167,86 @@
                 + Agregar gasto
             </button>
 
+
+
             <div class="row">
-                <div class="col-md-4 offset-md-8 text-end">
+
+                {{-- ================= BOTELLONES ================= --}}
+                <div class="col-md-6">
+
+                    <div class="card border-primary">
+                        <div class="card-body">
+
+                            <h6 class="mb-3 text-primary"><b>Control de Botellones</b></h6>
+
+                            <table class="table table-sm table-bordered text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th></th>
+                                        <th>Regular</th>
+                                        <th>Alcalina</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><b>Despachado</b></td>
+                                        <td>{{ $regularDespachado }}</td>
+                                        <td>{{ $alcalinaDespachado }}</td>
+                                    </tr>
+
+                                    <tr class="table-warning">
+                                        <td><b>Vendido</b></td>
+                                        <td>{{ $vendidosRegular }}</td>
+                                        <td>{{ $vendidosAlcalina }}</td>
+                                    </tr>
+
+                                    <tr class="{{ ($restanteRegular < 0 || $restanteAlcalina < 0) ? 'table-danger' : 'table-success' }}">
+                                        <td><b>Restante</b></td>
+                                        <td>{{ $restanteRegular }}</td>
+                                        <td>{{ $restanteAlcalina }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </div>
+
+
+                {{-- ================= FINANZAS ================= --}}
+                <div class="col-md-6 text-end">
+
                     <p>
                         <strong>Total gastos:</strong>
                         <span id="total-gastos">0.00</span> Bs
                     </p>
+
                     <p>
                         <strong>Efectivo a entregar:</strong>
                         <span id="efectivo-a-entregar" class="text-success">
                             {{ number_format($ingresoEfectivo, 2) }}
                         </span> Bs
                     </p>
+
                     <p>
                         <strong>QR a entregar:</strong>
                         <span id="qr-a-entregar" class="text-primary">
                             {{ number_format($ingresoQR, 2) }}
                         </span> Bs
                     </p>
+
                     <p>
                         <strong>Ingreso bruto:</strong>
                         <span id="ingreso-bruto" class="text-dark">
                             {{ number_format($ingresoBruto, 2) }}
                         </span> Bs
                     </p>
+
                 </div>
+
             </div>
+
 
         </div>
 

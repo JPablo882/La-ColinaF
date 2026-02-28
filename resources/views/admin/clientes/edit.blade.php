@@ -64,8 +64,13 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text"><i class="fab fa-whatsapp"></i></span>
                                     </div>
-                                    <input type="tel" class="form-control @error('celular') is-invalid @enderror" 
-                                           name="celular" value="{{ old('celular', $cliente->celular) }}" required>
+                                    <input type="tel" 
+                                        class="form-control @error('celular') is-invalid @enderror" 
+                                        name="celular"
+                                        value="{{ old('celular', $cliente->celular_real) }}"
+                                        @if($cliente->cliente_padre_id !== null) readonly @endif
+                                        required>
+                                        
                                 </div>
                                 @error('celular')
                                     <span class="invalid-feedback" role="alert">{{ $message }}</span>

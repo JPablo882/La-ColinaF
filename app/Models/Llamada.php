@@ -15,4 +15,10 @@ class Llamada extends Model
         'nombre_motoquero',
         'estado'
     ];
+
+    public function cliente()
+    {
+        return $this->belongsTo(\App\Models\Cliente::class);
+    }
+    
 }

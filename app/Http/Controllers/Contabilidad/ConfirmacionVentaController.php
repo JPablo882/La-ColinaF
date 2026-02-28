@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use App\Models\CierreVenta;
 use App\Models\CierreVentaGasto;
 use Illuminate\Support\Facades\DB;
+use App\Models\DespachoRepartidor;
 
 class ConfirmacionVentaController extends Controller
 {
@@ -21,7 +22,7 @@ class ConfirmacionVentaController extends Controller
         $fecha = $request->fecha ?? now()->toDateString();
         $distribuidorId = $request->distribuidor_id;
 
-
+        // Si aún no seleccionó distribuidor
         if (!$distribuidorId) {
             return view('admin.contabilidad.confirmar_venta', compact(
                 'distribuidores',
@@ -32,14 +33,17 @@ class ConfirmacionVentaController extends Controller
         $inicio = Carbon::parse($fecha)->startOfDay();
         $fin    = Carbon::parse($fecha)->endOfDay();
 
-        $pedidos = Pedido::with('cliente')
+        $pedidos = Pedido::with(['cliente', 'detalles'])
             ->where('motoquero_id', $distribuidorId)
             ->where('estado', 'Entregado')
             ->whereBetween('updated_at', [$inicio, $fin])
             ->orderBy('updated_at', 'asc')
             ->get();
 
-        // 🔢 Cálculos clave
+        // ===============================
+        // 💰 INGRESOS
+        // ===============================
+
         $ingresoBruto = $pedidos->sum('total_precio');
 
         $ingresoEfectivo = $pedidos
@@ -50,15 +54,51 @@ class ConfirmacionVentaController extends Controller
             ->where('metodo_pago', 'QR')
             ->sum('total_precio');
 
+        // ===============================
+        // 🚛 DESPACHO
+        // ===============================
 
+        $despacho = DespachoRepartidor::where('motoquero_id', $distribuidorId)
+            ->whereDate('created_at', $fecha)
+            ->first();
 
-        $cierreExistente = null;
-        if ($distribuidorId) {
-            $cierreExistente = CierreVenta::where('fecha', $fecha)
-                ->where('motoquero_id', $distribuidorId)
-                ->first();
+        $regularDespachado = $despacho->botellones_regular ?? 0;
+        $alcalinaDespachado = $despacho->botellones_alcalina ?? 0;
+
+        // ===============================
+        // 🟠 VENDIDOS
+        // ===============================
+
+        $vendidosRegular = 0;
+        $vendidosAlcalina = 0;
+
+        foreach ($pedidos as $pedido) {
+            foreach ($pedido->detalles as $detalle) {
+
+                if ($detalle->producto === 'Agua Regular') {
+                    $vendidosRegular += $detalle->cantidad;
+                }
+
+                if ($detalle->producto === 'Agua Alcalina') {
+                    $vendidosAlcalina += $detalle->cantidad;
+                }
+            }
         }
 
+        // ===============================
+        // 🟢 RESTANTES
+        // ===============================
+
+        $restanteRegular = $regularDespachado - $vendidosRegular;
+        $restanteAlcalina = $alcalinaDespachado - $vendidosAlcalina;
+
+        // ===============================
+        // 🔒 CIERRE EXISTENTE
+        // ===============================
+
+        $cierreExistente = CierreVenta::where('fecha', $fecha)
+            ->where('motoquero_id', $distribuidorId)
+            ->first();
 
         return view('admin.contabilidad.confirmar_venta', compact(
             'distribuidores',
@@ -68,7 +108,13 @@ class ConfirmacionVentaController extends Controller
             'ingresoBruto',
             'ingresoEfectivo',
             'ingresoQR',
-            'cierreExistente'
+            'cierreExistente',
+            'regularDespachado',
+            'alcalinaDespachado',
+            'vendidosRegular',
+            'vendidosAlcalina',
+            'restanteRegular',
+            'restanteAlcalina'
         ));
     }
 

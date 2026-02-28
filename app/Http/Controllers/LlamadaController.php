@@ -24,7 +24,12 @@ class LlamadaController extends Controller
     // Admin consulta solicitudes pendientes
     public function poll()
     {
-        return Llamada::where('estado', 'pendiente')->orderBy('id', 'desc')->get();
+        $llamadas = Llamada::with('cliente') // 👈 relación
+            ->where('estado', 'pendiente')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json($llamadas);
     }
 
     // Admin acepta la solicitud

@@ -20,6 +20,8 @@ use App\Http\Controllers\MotoqueroUbicacionController;
 use App\Http\Controllers\PromocionController;
 use App\Http\Controllers\Contabilidad\ConfirmacionVentaController;
 use App\Http\Controllers\Contabilidad\MovimientoContableController;
+use App\Http\Controllers\DespachoRepartidorController;
+use App\Http\Controllers\NotificacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -212,6 +214,13 @@ Route::post('admin/avisos-navegacion/crear', [AvisoNavegacionController::class, 
 
 
 
+Route::post('admin/pedidos/{pedido}/avisar', [App\Http\Controllers\PedidoController::class, 'avisarMotoquero'])->name('admin.pedidos.avisar')->middleware('auth');
+
+Route::get('admin/motoquero/avisos', [App\Http\Controllers\PedidoController::class, 'obtenerAvisosMotoquero'])->name('admin.motoquero.avisos')->middleware('auth');
+
+
+
+
 // 🔄 Estado de cambios del motoquero (polling inteligente)
 Route::get('admin/motoquero/{motoquero}/estado',[PedidoController::class, 'estadoMotoquero'])->name('admin.motoquero.estado')->middleware('auth');
 
@@ -303,3 +312,23 @@ Route::post('admin/contabilidad/gastos-fijos/{id}', [MovimientoContableControlle
 
 Route::patch('admin/contabilidad/gastos-fijos/{id}/toggle', [MovimientoContableController::class, 'toggleGastoFijo'])->name('admin.contabilidad.gastos-fijos.toggle')->middleware('auth', 'can:admin.contabilidad.gastos-fijos.store');
 
+
+
+Route::post('admin/despachos', [DespachoRepartidorController::class, 'store'])->name('admin.despachos.store')->middleware('auth');
+
+
+Route::post('/admin/clientes/validar', [ClienteController::class, 'validarCampo'])->name('admin.clientes.validar')->middleware('auth');
+
+Route::post('admin/clientes/{cliente}/imagen',  [ClienteController::class, 'guardarImagen'])->name('admin.clientes.imagen')->middleware('auth');
+
+Route::post('admin/clientes/buscar-por-celular',[ClienteController::class, 'buscarPorCelular'])->name('admin.clientes.buscarCelular')->middleware('auth');
+
+
+
+Route::get('/admin/notificaciones', [NotificacionController::class, 'index'])->name('admin.notificaciones.index')->middleware('auth');
+
+Route::post('/admin/notificaciones', [NotificacionController::class, 'update'])->name('admin.notificaciones.update')->middleware('auth');
+
+Route::post('/admin/clientes/{cliente}/toggle-notificacion', [App\Http\Controllers\ClienteController::class, 'toggleNotificacion'])->middleware('auth');
+
+Route::post('/admin/pedidos/{pedido}/toggle-notificacion', [App\Http\Controllers\PedidoController::class, 'toggleNotificacion'])->middleware('auth');

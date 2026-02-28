@@ -26,6 +26,7 @@ class Cliente extends Model
         'promo_activa',
         'promo_desde',
         'promo_hasta',
+        'inicio_navegacion_siempre',
     ];
 
     protected $casts = [
@@ -119,4 +120,28 @@ class Cliente extends Model
             (!$this->promo_desde || $this->promo_desde <= $ahora) &&
             (!$this->promo_hasta || $this->promo_hasta >= $ahora);
     }
+
+
+
+    public function padre()
+    {
+        return $this->belongsTo(Cliente::class, 'cliente_padre_id');
+    }
+
+    public function hijos()
+    {
+        return $this->hasMany(Cliente::class, 'cliente_padre_id');
+    }
+
+    /* 👇 Esto será CLAVE para WhatsApp */
+    public function getCelularRealAttribute()
+    {
+        if ($this->celular) {
+            return $this->celular;
+        }
+
+        return $this->padre ? $this->padre->celular : null;
+    }
+
+
 }

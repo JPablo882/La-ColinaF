@@ -56,7 +56,7 @@
                                     <div class="input-group-prepend">
                                         <span class="input-group-text"><i class="fab fa-whatsapp"></i></span>
                                     </div>
-                                    <input type="text" class="form-control" value="{{ $cliente->celular }}" readonly>
+                                    <input type="text" class="form-control" value="{{ $cliente->celular_real }}" readonly>
                                 </div>
                             </div>
                         </div>

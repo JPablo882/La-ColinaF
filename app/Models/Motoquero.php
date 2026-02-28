@@ -24,6 +24,14 @@ class Motoquero extends Model
         return $this->hasMany(\App\Models\CierreVenta::class);
     }
 
+    public function avisos()
+    {
+        return $this->hasMany(AvisoPedido::class);
+    }
 
+    public function despachos()
+    {
+        return $this->hasMany(DespachoRepartidor::class);
+    }
 
 }

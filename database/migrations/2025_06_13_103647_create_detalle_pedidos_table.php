@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreign('pedido_id')->references('id')->on('pedidos')->onDelete('cascade');
             
             $table->string('producto');
-            $table->string('detalle');
+            $table->string('detalle')->nullable();
             $table->integer('cantidad');
             $table->decimal('precio_unitario', 10, 2);
             $table->decimal('precio_total', 10, 2);

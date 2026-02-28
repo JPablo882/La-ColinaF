@@ -39,7 +39,7 @@
                             <tr>
                                 <td style="text-align:center">{{ $contador++ }}</td>
                                 <td>{{ $cliente->nombre }}</td>
-                                <td>{{ $cliente->celular }}</td>
+                                <td>{{ $cliente->celular_real }}</td>
                                 <td>{{ $cliente->direccion }}</td>
 
                                 {{-- NUEVAS COLUMNAS --}}

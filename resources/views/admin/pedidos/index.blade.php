@@ -224,8 +224,10 @@
                                 <th style="text-align:center">Ubicación GPS</th>
                                 <th style="text-align:center">Latitud</th>
                                 <th style="text-align:center">Longitud</th>
+                                <th style="text-align:center">Precios</th>
                                 <th style="text-align:center">Distribuidor</th>
                                 <th style="text-align:center">Estado</th>
+                                <th style="text-align:center">Notificación</th>
                                 <th style="text-align:center">Acción</th>
                             </tr>
                         </thead>
@@ -251,7 +253,7 @@
                                     @endif
                                 </td>
 
-                                <td>{{ $pedido->cliente->celular ?? '—' }}</td>
+                                <td>{{ $pedido->cliente->celular_real ?? '—' }}</td>
                                 <td>{{ $pedido->cliente->direccion ?? $pedido->direccion_entrega ?? '—' }}</td>
 
                                 <td>
@@ -264,6 +266,19 @@
 
                                 <td>{{ $pedido->cliente->latitud ?? '-' }}</td>
                                 <td>{{ $pedido->cliente->longitud ?? '-' }}</td>
+
+
+                                <td>
+                                    @if($pedido->precio_regular_ref)
+                                        <small>
+                                            <strong>Reg:</strong> Bs {{ number_format($pedido->precio_regular_ref, 2) }}<br>
+                                            <strong>Alc:</strong> Bs {{ number_format($pedido->precio_alcalina_ref, 2) }}
+                                        </small>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+
 
                                 <td style="text-align:center">
                                     @if($pedido->motoquero)
@@ -295,6 +310,30 @@
                                             @break
                                     @endswitch
                                 </td>
+
+
+                                <td style="text-align:center">
+
+                                    {{-- Siempre (Cliente) --}}
+                                    <div>
+                                        <input type="checkbox"
+                                            class="toggle-siempre"
+                                            data-cliente-id="{{ $pedido->cliente->id ?? '' }}"
+                                            {{ $pedido->cliente && $pedido->cliente->inicio_navegacion_siempre ? 'checked' : '' }}>
+                                        <small>Siempre</small>
+                                    </div>
+
+                                    {{-- Este pedido --}}
+                                    <div>
+                                        <input type="checkbox"
+                                            class="toggle-este-pedido"
+                                            data-pedido-id="{{ $pedido->id }}"
+                                            {{ $pedido->inicio_navegacion_este_pedido ? 'checked' : '' }}>
+                                        <small>Este pedido</small>
+                                    </div>
+
+                                </td>
+
 
                                 {{-- ACCIÓN --}}
                                 <td style="text-align:center">
@@ -382,6 +421,95 @@
                 <div class="motoquero-card">
                     <h4 class="text-center"><b>#{{ $motoquero->id }}, {{ $motoquero->apellidos }} {{ $motoquero->nombres }}</b></h4>
                     <hr>
+
+
+                    {{-- ================== --}}
+                    {{-- MINI TABLA DESPACHO --}}
+                    {{-- ================== --}}
+
+                    @php
+                        $despacho = $despachosHoy[$motoquero->id] ?? null;
+
+                        $regularDespachado = $despacho->botellones_regular ?? 0;
+                        $alcalinaDespachado = $despacho->botellones_alcalina ?? 0;
+
+                        $vendidosRegular = $pedidos
+                            ->where('estado','Entregado')
+                            ->where('motoquero_id',$motoquero->id)
+                            ->sum(function($p){
+                                return $p->detalles->where('producto','Agua Regular')->sum('cantidad');
+                            });
+
+                        $vendidosAlcalina = $pedidos
+                            ->where('estado','Entregado')
+                            ->where('motoquero_id',$motoquero->id)
+                            ->sum(function($p){
+                                return $p->detalles->where('producto','Agua Alcalina')->sum('cantidad');
+                            });
+
+                        $restanteRegular = $regularDespachado - $vendidosRegular;
+                        $restanteAlcalina = $alcalinaDespachado - $vendidosAlcalina;
+                    @endphp
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered text-center" style="font-size:12px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th></th>
+                                    <th>Regular</th>
+                                    <th>Alcalina</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                {{-- FILA 1 - DESPACHO --}}
+                                <tr>
+                                    <td><b>Despacho</b></td>
+                                    <td>
+                                        <form action="{{ route('admin.despachos.store') }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="motoquero_id" value="{{ $motoquero->id }}">
+                                            <input type="number" name="botellones_regular"
+                                                value="{{ $regularDespachado }}"
+                                                class="form-control form-control-sm text-center"
+                                                style="font-size:11px; padding:2px;">
+                                    </td>
+                                    <td>
+                                            <input type="number" name="botellones_alcalina"
+                                                value="{{ $alcalinaDespachado }}"
+                                                class="form-control form-control-sm text-center"
+                                                style="font-size:11px; padding:2px;">
+
+                                            <input type="hidden" name="dispensers" value="0">
+
+                                            <button type="submit"
+                                                class="btn btn-success btn-sm mt-1 w-100"
+                                                style="font-size:10px; padding:2px;">
+                                                Guardar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+
+                                {{-- FILA 2 - VENDIDO --}}
+                                <tr class="table-warning">
+                                    <td><b>Vendido</b></td>
+                                    <td>{{ $vendidosRegular }}</td>
+                                    <td>{{ $vendidosAlcalina }}</td>
+                                </tr>
+
+                                {{-- FILA 3 - RESTANTE --}}
+                                <tr class="table-success">
+                                    <td><b>Restante</b></td>
+                                    <td>{{ $restanteRegular }}</td>
+                                    <td>{{ $restanteAlcalina }}</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+
 
                     {{-- BOTÓN REPORTE --}}
                     <div class="text-center mb-2">
@@ -586,45 +714,86 @@
                         <div class="pedido-item text-muted">No hay pedidos en camino.</div>
                     @else
                         @foreach($enCamino as $index => $p)
-                            <div class="pedido-item" data-id="{{ $p->id }}">
-                                <b>{{ $p->cliente->nombre }}</b><br>
-                               
-                            <div>
-                              <small>
-                                @if($p->cliente->ubicacion_gps)
-                                    <a href="{{ $p->cliente->ubicacion_gps }}" target="_blank">Ver enlace</a>
-                                @else
-                                    <span class="text-muted">No registrado</span>
-                                @endif
-                              </small>
-                            </div>
+
+                            <div class="pedido-item mb-3 p-3 border rounded" data-id="{{ $p->id }}">
                                 
-                            {{-- BOTONES WHATSAPP PARA EN CAMINO --}}
+                                <b>{{ $p->cliente->nombre }}</b><br>
+
+                                <div>
+                                    <small>
+                                        @if($p->cliente->ubicacion_gps)
+                                            <a href="{{ $p->cliente->ubicacion_gps }}" target="_blank">Ver enlace</a>
+                                        @else
+                                            <span class="text-muted">No registrado</span>
+                                        @endif
+                                    </small>
+                                </div>
 
                                 @php
-                                     $msgVoy = urlencode("Hola, su pedido ya está en camino a su ubicación. El distribuidor llegará pronto.");
+                                    $msgVoy = urlencode("Hola, su pedido ya está en camino a su ubicación. El distribuidor llegará pronto.");
                                     $msgLlegada = urlencode("Hola, el distribuidor LLEGÓ a su ubicación. Por favor acérquese para recibir el pedido.");
                                 @endphp
 
-                                <div class="mt-1 d-flex gap-2">
 
-                                    {{-- Botón 1 - En Camino --}}
-                                    <a href="https://wa.me/591{{ $p->cliente->celular }}?text={{ $msgVoy }}"
-                                      target="_blank"
-                                    class="btn btn-success btn-sm">
-                                        <i class="fab fa-whatsapp"></i> En Camino
-                                    </a>
+                                {{-- ================= ACCIONES ================= --}}
+                                <div class="mt-3 p-2 border rounded bg-light">
 
-                                    {{-- Botón 2 - Llegada --}}
-                                    <a href="https://wa.me/591{{ $p->cliente->celular }}?text={{ $msgLlegada }}"
-                                    target="_blank"
-                                    class="btn btn-warning btn-sm">
-                                        <i class="fab fa-whatsapp"></i> Llegada
-                                    </a>
+                                    <div class="row g-2">
+
+                                        {{-- COLUMNA CLIENTE --}}
+                                        <div class="col-6">
+                                            <div class="fw-bold small text-success mb-1">Cliente</div>
+
+                                            <div class="d-grid gap-1">
+
+                                                <a href="https://wa.me/{{ $p->cliente->celular_real }}?text={{ $msgVoy }}"
+                                                target="_blank"
+                                                class="btn btn-success btn-sm py-1"
+                                                style="font-size: 12px;">
+                                                    🚚 En Camino
+                                                </a>
+
+                                                <a href="https://wa.me/{{ $p->cliente->celular_real }}?text={{ $msgLlegada }}"
+                                                target="_blank"
+                                                class="btn btn-warning btn-sm py-1"
+                                                style="font-size: 12px;">
+                                                    📍 Llegada
+                                                </a>
+
+                                            </div>
+                                        </div>
+
+                                        {{-- COLUMNA DISTRIBUIDOR --}}
+                                        <div class="col-6">
+                                            <div class="fw-bold small text-primary mb-1">Distribuidor</div>
+
+                                            <div class="d-grid gap-1">
+
+                                                <button 
+                                                    class="btn btn-primary btn-sm py-1 btn-avisar"
+                                                    style="font-size: 12px;"
+                                                    data-id="{{ $p->id }}"
+                                                    data-tipo="ya_sale">
+                                                    🚀 Ya Sale
+                                                </button>
+
+                                                <button 
+                                                    class="btn btn-danger btn-sm py-1 btn-avisar"
+                                                    style="font-size: 12px;"
+                                                    data-id="{{ $p->id }}"
+                                                    data-tipo="no_contesta">
+                                                    📞 No Contesta
+                                                </button>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
 
                                 </div>
 
                             </div>
+
                         @endforeach
                     @endif
                 </div>
@@ -690,7 +859,7 @@
                                     }
                                 @endphp
 
-                                    <a href="https://wa.me/591{{ $p->cliente->celular }}?text={{ $msgEntrega }}"
+                                    <a href="https://wa.me/{{ $p->cliente->celular_real }}?text={{ $msgEntrega }}"
                                     target="_blank"
                                     class="btn btn-primary btn-sm mt-1 btn-recibo">
                                         <i class="fab fa-whatsapp"></i> Enviar Recibo
@@ -804,9 +973,8 @@
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
-<script
-  src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMaps"
-  defer>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMaps&loading=async">
 </script>
 
 
@@ -989,7 +1157,7 @@ function cargarPedidosEnMapaGeneral() {
 
         const lat = row.querySelector('td:nth-child(7)')?.innerText;
         const lng = row.querySelector('td:nth-child(8)')?.innerText;
-        const nombreCliente = row.querySelector('td:nth-child(3)')?.innerText;
+        const nombreCliente = row.querySelector('td:nth-child(2)')?.innerText;
 
         if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
 
@@ -1415,20 +1583,39 @@ function refrescarPanelMotoquero(motoqueroId) {
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar SortableJS en listas por asignar y asignado
     document.querySelectorAll('.lista-por-asignar, .lista-asignado').forEach(function(el){
+
         new Sortable(el, {
-            group: 'shared',
+            group: {
+                name: 'solo-orden',
+                pull: false,
+                put: false
+            },
             animation: 150,
             ghostClass: 'dragging',
+
+            onMove: function (evt) {
+
+                // 🔥 Si intenta moverse a otra lista → cancelar
+                if (evt.from !== evt.to) {
+                    return false;
+                }
+
+            },
+
             onEnd: function(evt){
+
+                // 🛑 Seguridad extra
+                if (evt.from !== evt.to) {
+                    evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex]);
+                    return;
+                }
+
                 let lista = evt.to;
 
-                // Visual: invertida solo en admin
-                let total = lista.querySelectorAll('.pedido-item').length;
                 lista.querySelectorAll('.pedido-item').forEach((item,index)=>{
                     item.querySelector('b').textContent = '#' + (index + 1);
                 });
 
-                // Guardamos orden real en DB (ascendente)
                 let orden = [];
                 lista.querySelectorAll('.pedido-item').forEach((item,index)=>{
                     orden.push({id: item.dataset.id, posicion: index + 1});
@@ -1441,8 +1628,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify({orden: orden})
-                }).then(res=>res.json()).then(data=>{
-                    if(data.success) console.log('Orden actualizado');
                 });
 
                 actualizarBotonEmergencia();
@@ -1453,12 +1638,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (mapas[motoqueroId]) {
                     cargarMapaPorAsignar(motoqueroId, ruta);
                 }
-
-
             }
         });
-
-        
 
     });
     
@@ -1742,8 +1923,8 @@ function mostrarModal(data) {
     cont.innerHTML = `
         <p><strong>Cliente:</strong> ${data.nombre_cliente}</p>
         <p><strong>Celular:</strong> ${data.celular_cliente}</p>
-        <p><strong>Motoquero:</strong> ${data.nombre_motoquero}</p>
-        <p><strong>Motoquero ID:</strong> ${data.motoquero_id}</p>
+        <p><strong>Descripción:</strong> ${data.cliente?.direccion ?? 'Sin descripción'}</p>
+        <p><strong>Motoquero:</strong> ${data.motoquero_id}, ${data.nombre_motoquero}</p>
         <p class="text-danger fw-bold">
             El distribuidor solicita contactar al cliente.
         </p>
@@ -1798,7 +1979,7 @@ function atenderLlamada(id, celular) {
 
         // WhatsApp
         const url =
-            "https://wa.me/591" +
+            "https://wa.me/" +
             celular +
             "?text=" +
             encodeURIComponent("El distribuidor ya llegó a su ubicación.");
@@ -1876,6 +2057,7 @@ function mostrarAviso(data) {
     document.getElementById("contenidoAvisoNavegacion").innerHTML = `
         <p><strong>Cliente:</strong> ${data.cliente}</p>
         <p><strong>Celular:</strong> ${data.celular}</p>
+        <p><strong>Descripción:</strong> ${data.pedido?.cliente?.direccion ?? 'Sin descripción'}</p>
         <p><strong>Motoquero ID:</strong> ${data.motoquero_id}</p>
         <p class="text-primary fw-bold">
             El distribuidor inició la navegación hacia la ubicación del cliente.
@@ -1910,7 +2092,7 @@ function atenderAviso(id, celular) {
         avisoActual = null;
 
         const url =
-            "https://wa.me/591" +
+            "https://wa.me/" +
             celular +
             "?text=" +
             encodeURIComponent(
@@ -2215,8 +2397,87 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+document.addEventListener('click', function (e) {
 
+    const boton = e.target.closest('.btn-avisar');
+    if (!boton) return;
 
+    let pedidoId = boton.dataset.id;
+    let tipo = boton.dataset.tipo;
+
+    fetch(`/admin/pedidos/${pedidoId}/avisar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ tipo: tipo })
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if(data.success){
+
+            boton.disabled = true;
+            boton.innerText = "✔ Enviado";
+
+            setTimeout(() => {
+                boton.disabled = false;
+                boton.innerText = tipo === 'ya_sale'
+                    ? "🚀 Ya Sale"
+                    : "📞 No Contesta";
+            }, 3000);
+
+        } else {
+            alert('Error al enviar aviso');
+        }
+
+    })
+    .catch(error => {
+        alert('Error de conexión');
+    });
+
+});
+</script>
+
+<script>
+document.addEventListener('change', function(e) {
+
+    // Siempre
+    if (e.target.classList.contains('toggle-siempre')) {
+
+        let clienteId = e.target.dataset.clienteId;
+        let valor = e.target.checked ? 1 : 0;
+
+        fetch(`/admin/clientes/${clienteId}/toggle-notificacion`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ valor: valor })
+        });
+    }
+
+    // Este pedido
+    if (e.target.classList.contains('toggle-este-pedido')) {
+
+        let pedidoId = e.target.dataset.pedidoId;
+        let valor = e.target.checked ? 1 : 0;
+
+        fetch(`/admin/pedidos/${pedidoId}/toggle-notificacion`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ valor: valor })
+        });
+    }
+
+});
+</script>
 
 <!-- Modal de llamada de llegada-->
 <div class="modal fade" id="modalLlamada" tabindex="-1" aria-hidden="true">

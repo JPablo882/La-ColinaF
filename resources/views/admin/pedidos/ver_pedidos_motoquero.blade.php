@@ -52,7 +52,25 @@
                         {{ $pedido->cliente->direccion ?? $pedido->direccion_entrega }}
                     </p>
 
-                    <p><b>Observaciones:</b> {{ $pedido->observaciones }}</p>
+                    
+                                    {{-- 🟢 PRECIO REFERENCIA (dinámico por cliente) --}}
+                                        <div class="mt-2 p-2" style="background:#fff8e1; border-radius:6px;"
+                                            data-precio-box
+                                            data-cliente="{{ $pedido->cliente->id }}">
+
+                                            <b>Precio referencia:</b>
+                                            <div style="font-size:0.95rem; margin-top:4px;">
+                                                <div>
+                                                    Agua normal (ID 1):
+                                                    <span class="precio-id-1 text-muted">Cargando...</span>
+                                                </div>
+                                                <div>
+                                                    Agua alcalina (ID 2):
+                                                    <span class="precio-id-2 text-muted">Cargando...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {{-- 🟢 FIN PRECIO REFERENCIA --}}
 
                     {{-- 🔵 ÚLTIMA COMPRA --}}
                     @php
@@ -79,6 +97,8 @@
                         </p>
                     @endif
 
+                    
+
                     <div class="pedido-acciones">
                         <form action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/tomar_pedido') }}"
                               method="post"
@@ -87,7 +107,7 @@
                             @csrf
                             <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
                             <input type="hidden" name="cliente" value="{{ $pedido->cliente->nombre }}">
-                            <input type="hidden" name="celular" value="{{ $pedido->cliente->celular }}">
+                            <input type="hidden" name="celular" value="{{ $pedido->cliente->celular_real }}">
                             <input type="hidden" name="motoquero_id" value="{{ $pedido->motoquero_id }}">
 
 
@@ -145,7 +165,78 @@
                 </p>
 
                 <p><b>Descripción:</b> {{ $pedido->cliente->direccion ?? $pedido->direccion_entrega }}</p>
-                <p><b>Observaciones:</b> {{ $pedido->observaciones }}</p>
+                
+
+                {{-- 📷 IMAGEN CASA CLIENTE --}}
+                    <div class="mt-2 p-2" style="background:#f4f6f9; border-radius:8px;">
+
+                        <b>Imagen de referencia:</b>
+
+                        <div style="margin-top:8px;">
+
+                            @if($pedido->cliente->imagen_casa)
+                                <img src="{{ asset('storage/'.$pedido->cliente->imagen_casa) }}"
+                                    class="imagen-casa-preview"
+                                    data-cliente="{{ $pedido->cliente->id }}"
+                                    style="width:120px;height:120px;object-fit:cover;
+                                            border-radius:8px;cursor:pointer;
+                                            border:1px solid #ddd;">
+                            @else
+                                <div class="imagen-casa-preview"
+                                    data-cliente="{{ $pedido->cliente->id }}"
+                                    style="width:120px;height:120px;background:#e9ecef;
+                                            display:flex;align-items:center;justify-content:center;
+                                            border-radius:8px;cursor:pointer;
+                                            border:1px dashed #bbb;">
+                                    Sin imagen
+                                </div>
+                            @endif
+
+                            <form class="form-imagen-casa"
+                                data-cliente="{{ $pedido->cliente->id }}"
+                                action="{{ route('admin.clientes.imagen', $pedido->cliente->id) }}"
+                                enctype="multipart/form-data"
+                                style="display:none;">
+
+                                @csrf
+                                <input type="file"
+                                    name="imagen_casa"
+                                    accept="image/*"
+                                    capture="environment">
+                            </form>
+
+                            <div style="margin-top:6px;">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary btn-subir-imagen"
+                                        data-cliente="{{ $pedido->cliente->id }}">
+                                    {{ $pedido->cliente->imagen_casa ? 'Cambiar Imagen' : 'Agregar Imagen' }}
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                    {{-- FIN IMAGEN CASA --}}
+
+
+
+                {{-- 🟢 PRECIO REFERENCIA (dinámico por cliente) --}}
+                <div class="mt-2 p-2" style="background:#fff8e1; border-radius:6px;"
+                    data-precio-box
+                    data-cliente="{{ $pedido->cliente->id }}">
+
+                    <b>Precio referencia:</b>
+                    <div style="font-size:0.95rem; margin-top:4px;">
+                        <div>
+                            Agua normal (ID 1):
+                            <span class="precio-id-1 text-muted">Cargando...</span>
+                        </div>
+                        <div>
+                            Agua alcalina (ID 2):
+                            <span class="precio-id-2 text-muted">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+                {{-- 🟢 FIN PRECIO REFERENCIA --}}
 
 
                 {{-- 🔵 ÚLTIMA COMPRA (solo producto + cantidad) usando $ultimasCompras precargado --}}
@@ -172,7 +263,7 @@
 
 
                 @php
-                $msgLlegué = "Llegué a la ubicación: " . $pedido->cliente->nombre . ", " . $pedido->cliente->celular . ", " . "https://wa.me/591" . $pedido->cliente->celular . "?text=Hola,%20el%20distribuidor%20LLEGÓ%20a%20su%20ubicación.%20Por%20favor%20acérquese%20para%20recibir%20el%20pedido." ;                           
+                $msgLlegué = "Llegué a la ubicación: " . $pedido->cliente->nombre . ",   ". "+"  . $pedido->cliente->celular_real . ",  ". "https://wa.me/" . $pedido->cliente->celular_real . "?text=Hola,%20el%20distribuidor%20LLEGÓ%20a%20su%20ubicación.%20Por%20favor%20acérquese%20para%20recibir%20el%20pedido." ;                           
                 $msgLlegué = urlencode($msgLlegué);
                 @endphp
 
@@ -182,7 +273,7 @@
                     </a>
                 
                     <button class="btn btn-warning btn-sm"
-                        onclick="solicitarLlamada({{ $pedido->cliente->id }}, '{{ $pedido->cliente->nombre }}', '{{ $pedido->cliente->celular }}', '{{ auth()->user()->name }}', '{{ $pedido->motoquero_id }}')">
+                        onclick="solicitarLlamada({{ $pedido->cliente->id }}, '{{ $pedido->cliente->nombre }}', '{{ $pedido->cliente->celular_real }}', '{{ auth()->user()->name }}', '{{ $pedido->motoquero_id }}')">
                         <i class="fas fa-phone"></i> Hacer Llamar
                     </button>
 
@@ -244,17 +335,17 @@
                     </p>
 
                     <p><b>Descripción:</b> {{ $pedido->cliente->direccion ?? $pedido->direccion_entrega }}</p>
-                    <p><b>Observaciones:</b> {{ $pedido->observaciones }}</p>
+                    
 
                     </p>
 
                     @if($pedido->detalles->count() > 0)
-                        <table class="table table-bordered mt-2">
+                        <table class="table table-sm table-bordered mt-2 tabla-entregados">
                             <thead>
                                 <tr>
                                     <th>Producto</th>
                                     <th>Cantidad</th>
-                                    <th>Precio Unitario (Bs)</th>
+                                    <th>Precio U. (Bs)</th>
                                     <th>Total (Bs)</th>
                                 </tr>
                             </thead>
@@ -283,7 +374,7 @@
 
 {{-- MODAL FINALIZAR ENTREGA --}}
 <div class="modal fade" id="modalVenta" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST" action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/finalizar_pedido') }}">
                 @csrf
@@ -297,7 +388,7 @@
 
                 <div class="modal-body">
                     {{-- Tabla de productos --}}
-                    <table class="table table-bordered text-center" id="tablaProductos">
+                    <table class="table table-sm text-center tabla-finalizar" id="tablaProductos">
                         <thead class="thead-light">
                             <tr>
                                 <th>Producto</th>
@@ -361,6 +452,11 @@
 </div>
 
 
+
+<audio id="sound-ya-sale" src="{{ asset('sounds/ya_sale.mp3') }}"></audio>
+<audio id="sound-no-contesta" src="{{ asset('sounds/no_contesta.mp3') }}"></audio>
+
+
 @stop
 
 @section('css')
@@ -372,6 +468,57 @@
 .scroll-entregados::-webkit-scrollbar { width: 8px; }
 .scroll-entregados::-webkit-scrollbar-thumb { background-color: #28a745; border-radius: 10px; }
 .scroll-entregados::-webkit-scrollbar-track { background: #e9ecef; }
+</style>
+
+<style>
+.tabla-finalizar { font-size: 13px; table-layout: fixed; width: 100%;}
+.tabla-finalizar th,
+.tabla-finalizar td {padding: 5px 6px; vertical-align: middle;}
+/* Producto */
+.tabla-finalizar th:nth-child(1),
+.tabla-finalizar td:nth-child(1) {width: 28%;}
+/* Precio ref */
+.tabla-finalizar th:nth-child(2),
+.tabla-finalizar td:nth-child(2) {width: 14%;}
+/* Cantidad (más angosta) */
+.tabla-finalizar th:nth-child(3),
+.tabla-finalizar td:nth-child(3) {width: 12%;}
+/* Total (más ancho) */
+.tabla-finalizar th:nth-child(4),
+.tabla-finalizar td:nth-child(4) {width: 18%;white-space: nowrap;}
+/* Acción */
+.tabla-finalizar th:nth-child(5),
+.tabla-finalizar td:nth-child(5) {width: 12%;}
+/* Inputs más pequeños */
+.tabla-finalizar input,
+.tabla-finalizar select { height: 30px; font-size: 13px; padding: 3px 6px;}
+/* Evita que el modal se desborde en móvil */
+#modalVenta .modal-body {overflow-x: auto;}
+</style>
+<style>
+/* Contenedor scroll horizontal solo si es necesario */
+.scroll-entregados { overflow-x: auto;}
+/* Tabla más compacta */
+.tabla-entregados { font-size: 13px; table-layout: fixed; width: 100%;}
+.tabla-entregados th,
+.tabla-entregados td { padding: 4px 6px; vertical-align: middle;}
+/* Producto */
+.tabla-entregados th:nth-child(1),
+.tabla-entregados td:nth-child(1) { width: 35%;}
+/* Cantidad (MUCHO más angosta) */
+.tabla-entregados th:nth-child(2),
+.tabla-entregados td:nth-child(2) { width: 10%; text-align: center;}
+/* Precio Unitario */
+.tabla-entregados th:nth-child(3),
+.tabla-entregados td:nth-child(3) { width: 20%; text-align: right; white-space: nowrap;}
+/* Total */
+.tabla-entregados th:nth-child(4),
+.tabla-entregados td:nth-child(4) {width: 20%;text-align: right;white-space: nowrap;}
+/* En móvil reducir aún más */
+@media (max-width: 576px) {
+.tabla-entregados {font-size: 12px;}
+.tabla-entregados th,
+.tabla-entregados td {padding: 3px 4px;}}
 </style>
 @stop
 
@@ -989,6 +1136,322 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 
+<script>
 
+let sonidoActivo = null;
+let intervaloVibracion = null;
+
+function iniciarAlerta(tipo) {
+
+    // 🔊 Elegir sonido según tipo
+    if (tipo === 'ya_sale') {
+        sonidoActivo = document.getElementById('sound-ya-sale');
+    }
+
+    if (tipo === 'no_contesta') {
+        sonidoActivo = document.getElementById('sound-no-contesta');
+    }
+
+    // 🔊 SONIDO EN LOOP
+    if (sonidoActivo) {
+        sonidoActivo.currentTime = 0;
+        sonidoActivo.loop = true;
+        sonidoActivo.play().catch(() => {});
+    }
+
+    // 📳 VIBRACIÓN CONTINUA
+    if (navigator.vibrate) {
+        intervaloVibracion = setInterval(() => {
+            navigator.vibrate([500, 300, 500]);
+        }, 1200);
+    }
+}
+
+function detenerAlerta() {
+
+    // 🔇 Detener sonido
+    if (sonidoActivo) {
+        sonidoActivo.pause();
+        sonidoActivo.currentTime = 0;
+        sonidoActivo.loop = false;
+    }
+
+    // 📳 Detener vibración
+    if (intervaloVibracion) {
+        clearInterval(intervaloVibracion);
+        intervaloVibracion = null;
+    }
+
+    if (navigator.vibrate) {
+        navigator.vibrate(0);
+    }
+}
+
+function checkAvisos() {
+
+    fetch("{{ route('admin.motoquero.avisos') }}", {
+        headers: {
+            'Accept': 'application/json'
+        },
+        redirect: 'manual'
+    })
+    .then(res => {
+
+        if (res.status === 302) return null;
+        if (res.status === 204) return null;
+        if (res.status === 401) return null;
+        if (!res.ok) return null;
+
+        return res.json();
+    })
+    .then(data => {
+
+        if (!data || data.length === 0) return;
+
+        data.forEach(aviso => {
+
+            iniciarAlerta(aviso.tipo);
+
+            let titulo = '';
+            let color = '';
+            let mensaje = '';
+
+            if (aviso.tipo === 'ya_sale') {
+                titulo = '🚀 Cliente en salida';
+                color = '#28a745';
+                mensaje = '<span style="color:green;font-weight:bold;">EL CLIENTE YA SALE</span>';
+            }
+
+            if (aviso.tipo === 'no_contesta') {
+                titulo = '📞 Cliente no responde';
+                color = '#dc3545';
+                mensaje = '<span style="color:red;font-weight:bold;">NO CONTESTA – TOCAR PUERTA</span>';
+            }
+
+            Swal.fire({
+                icon: 'info',
+                title: titulo,
+                html: `
+                    <b>Pedido:</b> #${aviso.pedido_id}<br>
+                    <b>Cliente:</b> ${aviso.cliente}<br><br>
+                    ${mensaje}
+                `,
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: color,
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(() => {
+                detenerAlerta();
+            });
+
+        });
+
+    })
+    .catch(() => {});
+}
+
+// ⏱ Polling cada 5 segundos
+setInterval(checkAvisos, 5000);
+
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('[data-precio-box]').forEach(box => {
+
+        const clienteId = box.dataset.cliente;
+
+        function obtenerPrecio(productoId, claseSpan) {
+
+            fetch(`/admin/pedidos/precio-cliente/${clienteId}/${productoId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.precio) {
+                        box.querySelector(claseSpan).innerText = data.precio + ' Bs';
+                    } else {
+                        box.querySelector(claseSpan).innerText = '—';
+                    }
+                })
+                .catch(() => {
+                    box.querySelector(claseSpan).innerText = '—';
+                });
+        }
+
+        // Producto ID 1 → Agua normal
+        obtenerPrecio(1, '.precio-id-1');
+
+        // Producto ID 2 → Agua alcalina
+        obtenerPrecio(2, '.precio-id-2');
+
+    });
+
+});
+</script>
+
+
+<script>
+document.addEventListener('click', function(e){
+
+    // Abrir selector cámara
+    if(e.target.classList.contains('btn-subir-imagen')){
+
+        const clienteId = e.target.dataset.cliente;
+        const form = document.querySelector(
+            `.form-imagen-casa[data-cliente="${clienteId}"]`
+        );
+
+        form.querySelector('input[name="imagen_casa"]').click();
+    }
+});
+
+
+document.addEventListener('change', function(e){
+
+    if(e.target.name === 'imagen_casa'){
+
+        const file = e.target.files[0];
+        if(!file) return;
+
+        const form = e.target.closest('form');
+        const clienteId = form.dataset.cliente;
+
+        const reader = new FileReader();
+
+        reader.onload = function(event){
+
+            const img = new Image();
+            img.src = event.target.result;
+
+            img.onload = function(){
+
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1000;
+
+                let width = img.width;
+                let height = img.height;
+
+                if(width > MAX_WIDTH){
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(function(blob){
+
+                    if(blob.size > 500 * 1024){
+                        alert("La imagen supera 500KB.");
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('imagen_casa', blob, 'imagen.jpg');
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN':
+                                document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+
+                        if(data.success){
+
+                            // Actualizar preview sin recargar
+                            const preview = document.querySelector(
+                                `.imagen-casa-preview[data-cliente="${clienteId}"]`
+                            );
+
+                            preview.outerHTML =
+                                `<img src="${data.ruta}"
+                                      class="imagen-casa-preview"
+                                      data-cliente="${clienteId}"
+                                      style="width:120px;height:120px;object-fit:cover;
+                                             border-radius:8px;cursor:pointer;
+                                             border:1px solid #ddd;">`;
+
+                        }
+                    });
+
+                }, 'image/jpeg', 0.7); // calidad 70%
+            };
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+
+<script>
+document.addEventListener('click', function(e){
+
+    // Abrir modal si hacen click en imagen
+    if(e.target.classList.contains('imagen-casa-preview')
+        && e.target.tagName === 'IMG'){
+
+        const modal = document.getElementById('modalImagenCasa');
+        const imgModal = document.getElementById('imagenModalGrande');
+
+        imgModal.src = e.target.src;
+        modal.style.display = 'flex';
+    }
+
+    // Cerrar con X
+    if(e.target.id === 'cerrarModalImagen'){
+        document.getElementById('modalImagenCasa').style.display = 'none';
+    }
+
+    // Cerrar tocando fondo oscuro
+    if(e.target.id === 'modalImagenCasa'){
+        document.getElementById('modalImagenCasa').style.display = 'none';
+    }
+
+});
+</script>
+
+
+<!-- 🔍 MODAL IMAGEN GRANDE -->
+<div id="modalImagenCasa" style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.85);
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+">
+
+    <span id="cerrarModalImagen"
+          style="
+            position:absolute;
+            top:20px;
+            right:25px;
+            font-size:30px;
+            color:white;
+            cursor:pointer;
+          ">
+        &times;
+    </span>
+
+    <img id="imagenModalGrande"
+         src=""
+         style="
+            max-width:95%;
+            max-height:90%;
+            border-radius:10px;
+            box-shadow:0 0 20px rgba(0,0,0,0.5);
+         ">
+</div>
 
 @stop
