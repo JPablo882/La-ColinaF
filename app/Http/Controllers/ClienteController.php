@@ -7,6 +7,7 @@ use App\Models\Promocion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class ClienteController extends Controller
 {
