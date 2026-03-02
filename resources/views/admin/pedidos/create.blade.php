@@ -124,14 +124,14 @@
 @section('js')
 
 <script async
-    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async">
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap">
 </script>
 
 <script>
 let map;
 let markers = [];
 
-function initMap() {
+window.initMap = function () {
 
     map = new google.maps.Map(document.getElementById("mapaClientes"), {
         center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
