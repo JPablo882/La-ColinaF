@@ -144,7 +144,7 @@ function initMap() {
 
 $(document).ready(function () {
 
-    // DataTable
+    // DataTableh
     if ($.fn.DataTable) {
         $('#tablaClientes').DataTable({
             language: {
