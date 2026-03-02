@@ -270,26 +270,75 @@ public function create()
      * EXTRAER COORDS (AJAX)
      * ============================ */
     public function obtenerCoords(Request $request)
-    {
-        $url = $request->input('url');
+{
+    $url = $request->input('url');
 
-        try {
-            $response = Http::withOptions(['allow_redirects' => true])->get($url);
-            $finalUrl = (string) $response->effectiveUri();
-
-            if (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $finalUrl, $m)) {
-                return response()->json(['lat' => $m[1], 'lng' => $m[2]]);
-            }
-
-            if (preg_match('/q=(-?\d+\.\d+),(-?\d+\.\d+)/', $finalUrl, $m)) {
-                return response()->json(['lat' => $m[1], 'lng' => $m[2]]);
-            }
-
-            return response()->json(['error' => 'No se encontraron coordenadas'], 404);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error procesando el enlace'], 500);
-        }
+    if (!$url) {
+        return response()->json(['error' => 'URL vacía'], 400);
     }
+
+    try {
+
+        /* =====================================================
+         * 1️⃣ MÉTODO ORIGINAL (NO lo modificamos)
+         * ===================================================== */
+        $response = Http::withOptions([
+            'allow_redirects' => true,
+            'timeout' => 10,
+        ])->get($url);
+
+        $finalUrl = (string) $response->effectiveUri();
+
+        if (preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $finalUrl, $m)) {
+            return response()->json(['lat' => $m[1], 'lng' => $m[2]]);
+        }
+
+        if (preg_match('/q=(-?\d+\.\d+),(-?\d+\.\d+)/', $finalUrl, $m)) {
+            return response()->json(['lat' => $m[1], 'lng' => $m[2]]);
+        }
+
+        if (preg_match('/ll=(-?\d+\.\d+),(-?\d+\.\d+)/', $finalUrl, $m)) {
+            return response()->json(['lat' => $m[1], 'lng' => $m[2]]);
+        }
+
+        /* =====================================================
+         * 2️⃣ SOLO SI FALLA → USAR API (si existe)
+         * ===================================================== */
+        $apiKey = env('GOOGLE_MAPS_API_KEY');
+
+        if ($apiKey) {
+
+            $geoResponse = Http::get(
+                'https://maps.googleapis.com/maps/api/geocode/json',
+                [
+                    'address' => $url,
+                    'key' => $apiKey,
+                ]
+            );
+
+            $geoData = $geoResponse->json();
+
+            if (isset($geoData['status']) && $geoData['status'] === 'OK') {
+
+                $location = $geoData['results'][0]['geometry']['location'];
+
+                return response()->json([
+                    'lat' => $location['lat'],
+                    'lng' => $location['lng']
+                ]);
+            }
+        }
+
+        return response()->json(['error' => 'No se encontraron coordenadas'], 404);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'error' => 'Error procesando el enlace',
+            'detalle' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /* ============================
      * HELPER PRIVADO
