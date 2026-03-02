@@ -124,7 +124,7 @@
 @section('js')
 
 <script async
-    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}">
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async">
 </script>
 
 <script>
@@ -137,14 +137,12 @@ function initMap() {
         center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
         zoom: 12,
     });
-    document.addEventListener("DOMContentLoaded", function () {
-    iniciarMapa();
-});
+   
 }
 
 $(document).ready(function () {
 
-    // DataTableh
+    // DataTable
     if ($.fn.DataTable) {
         $('#tablaClientes').DataTable({
             language: {
