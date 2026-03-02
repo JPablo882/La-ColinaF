@@ -131,13 +131,14 @@
 let map;
 let markers = [];
 
-function initMap() {
+window.initMap = function () {
 
     map = new google.maps.Map(document.getElementById("mapaClientes"), {
-        center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
+        center: { lat: -17.7833, lng: -63.1821 },
         zoom: 12,
     });
-}
+
+};
 
 $(document).ready(function () {
 
