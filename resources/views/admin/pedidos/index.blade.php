@@ -1185,7 +1185,7 @@ function cargarPedidosEnMapaGeneral() {
 </script>
 
 <script>
-function initMaps() {
+window.initMaps = function () {
     document.querySelectorAll('.mapa-por-asignar').forEach(div => {
         cargarMapaPorAsignar(div.dataset.motoquero, div.dataset.ruta || 'A');
     });
