@@ -974,7 +974,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <script async
-  src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMaps">
+  src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}">
 </script>
 
 
@@ -1182,20 +1182,7 @@ function cargarPedidosEnMapaGeneral() {
         marcadoresGeneral.push(marker);
     });
 }
-</script>
-
-<script>
-window.initMaps = function () {
-    document.querySelectorAll('.mapa-por-asignar').forEach(div => {
-        cargarMapaPorAsignar(div.dataset.motoquero, div.dataset.ruta || 'A');
-    });
-
-    initMapaGeneralPedidos();
-}
-</script>
-
-
-<script>
+</script><script>
 
 // ==========================
 // CREAR PEDIDO RÁPIDO
@@ -2646,3 +2633,24 @@ document.addEventListener('change', function(e) {
 </div>
 
 @stop
+<script>
+window.addEventListener("load", function () {
+
+    if (typeof google === "undefined") {
+        console.error("Google Maps no cargó");
+        return;
+    }
+
+    // 🔥 INICIAR MAPA GENERAL
+    initMapaGeneralPedidos();
+
+    // 🔥 MAPAS POR ASIGNAR
+    document.querySelectorAll('.mapa-por-asignar').forEach(div => {
+        cargarMapaPorAsignar(
+            div.dataset.motoquero,
+            div.dataset.ruta || 'A'
+        );
+    });
+
+});
+</script>
