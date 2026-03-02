@@ -124,7 +124,7 @@
 @section('js')
 
 <script async
-    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async">
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}">
 </script>
 
 <script>
@@ -132,14 +132,18 @@ let map;
 
 let markers = [];
 
-function initMap() {
+document.addEventListener("DOMContentLoaded", function () {
 
-    map = new google.maps.Map(document.getElementById("mapaClientes"), {
-        center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
-        zoom: 12,
-    });
-   
-}
+    if (typeof google !== "undefined" && document.getElementById("mapaClientes")) {
+
+        map = new google.maps.Map(document.getElementById("mapaClientes"), {
+            center: { lat: -17.7833, lng: -63.1821 },
+            zoom: 12,
+        });
+
+    }
+
+});
 
 $(document).ready(function () {
 
