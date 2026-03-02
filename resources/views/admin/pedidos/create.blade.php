@@ -124,33 +124,15 @@
 @section('js')
 
 <script async
-    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}">
+    src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&loading=async">
 </script>
 
 <script>
 let map;
-document.addEventListener("DOMContentLoaded", function () {
 
-    const intervalo = setInterval(function () {
-
-        if (typeof google !== "undefined" && google.maps) {
-
-            map = new google.maps.Map(
-                document.getElementById("mapaClientes"), {
-                    center: { lat: -17.7833, lng: -63.1821 },
-                    zoom: 12
-                }
-            );
-
-            clearInterval(intervalo);
-        }
-
-    }, 100);
-
-});
 let markers = [];
 
-window.initMap = function () {
+function initMap() {
 
     map = new google.maps.Map(document.getElementById("mapaClientes"), {
         center: { lat: -17.7833, lng: -63.1821 }, // Santa Cruz
