@@ -894,4 +894,62 @@ public function toggleNotificacion(Request $request, $pedidoId)
 }
 
 
+public function mapaAsignados(Request $request)
+{
+    $motoqueroId = $request->motoquero_id;
+
+    $pedidos = Pedido::with('cliente')
+        ->where('motoquero_id', $motoqueroId)
+        ->where('estado', 'Asignado')
+        ->whereDate('updated_at', Carbon::today())   // 👈 FILTRAR SOLO HOY
+        ->orderBy('orden', 'asc')
+        ->get();
+
+    $datos = $pedidos->map(function ($pedido) {
+        return [
+            'id' => $pedido->id,
+            'orden' => $pedido->orden,
+            'nombre' => $pedido->cliente->nombre ?? 'Sin nombre',
+            'latitud' => $pedido->cliente->latitud ?? null,
+            'longitud' => $pedido->cliente->longitud ?? null,
+        ];
+    });
+
+    return response()->json($datos);
+}
+
+
+public function obtenerMetodoPago($id)
+{
+    $pedido = Pedido::findOrFail($id);
+
+    return response()->json([
+        'metodo_pago' => $pedido->metodo_pago
+    ]);
+}
+
+
+
+
+
+public function actualizarEntrega(Request $request, $id)
+{
+    $request->validate([
+        'metodo_pago' => 'required|string'
+    ]);
+
+    $pedido = Pedido::findOrFail($id);
+
+    $pedido->metodo_pago = $request->metodo_pago;
+    $pedido->save();
+
+    return response()->json([
+        'success' => true
+    ]);
+}
+
+
+
+
+
 }

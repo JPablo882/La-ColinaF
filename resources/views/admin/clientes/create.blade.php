@@ -33,8 +33,8 @@
                                        id="nombre"
                                        class="form-control"
                                        name="nombre"
-                                       value="{{ old('nombre') }}"
-                                       placeholder="Ej: LCC 1022"
+                                       value="{{ old('nombre', 'LCC ', request('nombre')) }}"
+                                      
                                        required>
                                 <small id="nombre_feedback" class="text-danger d-none"></small>
                             </div>
@@ -74,7 +74,7 @@
                                 <input type="text"
                                        class="form-control"
                                        name="direccion"
-                                       value="{{ old('direccion') }}"
+                                       value="{{ old('direccion', '| # | Botellon normal | Sale afuera |') }}"
                                        placeholder="Ej: | Calle, #Casa|Sin Agarrador|Sale Afuera|Confirmar:no| "
                                        required>
                             </div>
@@ -161,6 +161,14 @@
 @section('js')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    const params = new URLSearchParams(window.location.search);
+    const nombreURL = params.get('nombre');
+
+    if (nombreURL) {
+        const nombreInput = document.getElementById('nombre');
+        nombreInput.value = "LCC " + nombreURL;
+    }
 
     const nombreInput = document.getElementById('nombre');
     const celularInput = document.getElementById('celular');

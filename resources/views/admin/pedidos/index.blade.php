@@ -633,6 +633,16 @@
             <div class="estado-section">
                 <div class="estado-title asignado">🟦 Asignado</div>
 
+
+                <div class="text-center mt-2 mb-2">
+                    <button 
+                        class="btn btn-sm btn-dark btn-ver-mapa-asignados"
+                        data-motoquero="{{ $motoquero->id }}">
+                        🗺 Ver mapa
+                    </button>
+                </div>
+
+
                 @php
                     $asignados = $pedidos
                         ->where('estado','Asignado')
@@ -813,7 +823,24 @@
                         @else
                             @foreach($entregados as $p)
                             <div class="pedido-item">
-                                <b>{{ $p->cliente->nombre }}</b><br>
+
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+
+                                    <b>{{ $p->cliente->nombre }}</b>
+
+                                    <button 
+                                        class="btn btn-sm btn-success px-2 py-0 btnEditarEntrega"
+                                        style="font-size:12px;"
+                                        data-id="{{ $p->id }}"
+                                    >
+                                        Editar
+                                    </button>
+
+                                </div>
+                                    
+
+
                                 <small><b>Total:</b> Bs {{ number_format($p->total_precio ?? 0,2) }}</small><br>
                                 <small><b>Pago:</b> {{ $p->metodo_pago ?? 'No definido' }}</small>
                             
@@ -864,6 +891,8 @@
                                     class="btn btn-primary btn-sm mt-1 btn-recibo">
                                         <i class="fab fa-whatsapp"></i> Enviar Recibo
                                     </a>
+
+
 
                             </div>
                             @endforeach
@@ -1001,6 +1030,14 @@ let clientePendienteMapa = null;
 let clienteSeleccionado = null;
 const clientes = @json($clientes);
 
+
+let mapaModalAsignados = null;
+let marcadoresModalAsignados = [];
+let ordenModalAsignados = [];
+let modoOrdenModalAsignados = false;
+let modoOrdenar = false;
+
+
 </script>
 
 
@@ -1061,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     buscador.addEventListener('keyup', function () {
 
-        const q = this.value.toLowerCase();
+        const q = this.value.toLowerCase().trim();
         const contenedor = document.getElementById('resultadosClientes');
         contenedor.innerHTML = '';
 
@@ -1071,23 +1108,71 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const resultados = clientes
-            .filter(c => c.nombre.toLowerCase().includes(q))
+            .filter(c =>
+                c.nombre.toLowerCase().includes(q) ||
+                (c.celular && c.celular.includes(q))
+            )
             .slice(0, 8);
 
+        // ==========================
+        // SI NO HAY RESULTADOS
+        // ==========================
+        if (resultados.length === 0) {
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action text-danger';
+            btn.innerHTML = `❌ Cliente no registrado: <b>${q}</b>`;
+
+            btn.onclick = function () {
+
+                Swal.fire({
+                    title: 'Cliente no registrado',
+                    text: '¿Desea registrar este cliente?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, registrar',
+                    cancelButtonText: 'No'
+                }).then(result => {
+
+                    if (result.isConfirmed) {
+
+                        // Ir al create enviando el nombre
+                        window.location.href =
+                            "{{ route('admin.clientes.create') }}?nombre=" + encodeURIComponent(q);
+
+                    }
+
+                });
+
+            };
+
+            contenedor.appendChild(btn);
+            return;
+        }
+
+        // ==========================
+        // MOSTRAR RESULTADOS
+        // ==========================
         resultados.forEach(c => {
+
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'list-group-item list-group-item-action';
             btn.dataset.id = c.id;
             btn.innerHTML = `<b>${c.nombre}</b>`;
+
             contenedor.appendChild(btn);
+
         });
 
         const primerCliente = resultados.find(c => c.latitud && c.longitud);
         if (primerCliente) {
             mostrarClienteEnMapa(primerCliente, 'temporal');
         }
+
     });
+
 
 });
 </script>
@@ -1182,7 +1267,10 @@ function cargarPedidosEnMapaGeneral() {
         marcadoresGeneral.push(marker);
     });
 }
-</script><script>
+</script>
+
+
+<script>
 
 // ==========================
 // CREAR PEDIDO RÁPIDO
@@ -1405,7 +1493,103 @@ document.addEventListener('click', e => {
     });
 });
 
+
+
+function cargarMapaAsignadosModal(motoqueroId){
+
+    modoOrdenModalAsignados = false;
+
+    const cont = document.getElementById('mapa-asignados-modal');
+    if(!cont) return;
+
+    cont.innerHTML = '';
+
+    fetch(`/admin/pedidos/mapa-asignados?motoquero_id=${motoqueroId}`)
+    .then(r => r.json())
+    .then(pedidos => {
+
+        if(!pedidos.length){
+            cont.innerHTML = '<p class="text-muted">Sin pedidos asignados</p>';
+            return;
+        }
+
+        mapaModalAsignados = new google.maps.Map(cont,{
+            zoom:13,
+            center:{
+                lat: parseFloat(pedidos[0].latitud),
+                lng: parseFloat(pedidos[0].longitud)
+            }
+        });
+
+        marcadoresModalAsignados = [];
+        ordenModalAsignados = [];
+
+        pedidos.forEach(p => {
+
+            if(!p.latitud || !p.longitud) return;
+
+            const marker = new google.maps.Marker({
+                map: mapaModalAsignados,
+                position:{
+                    lat: parseFloat(p.latitud),
+                    lng: parseFloat(p.longitud)
+                },
+                label: p.orden ? String(p.orden) : '',
+                title: p.nombre
+            });
+
+            marker.pedidoId = p.id;
+
+
+            marker.addListener('click',function(){
+
+                if(!modoOrdenModalAsignados) return;
+
+                if(ordenModalAsignados.includes(marker)) return;
+
+                ordenModalAsignados.push(marker);
+                marker.setLabel(String(ordenModalAsignados.length));
+
+            });
+
+            marcadoresModalAsignados.push(marker);
+
+        });
+
+    });
+}
+
+
+document.addEventListener('click',function(e){
+
+    const btn = e.target.closest('#btnOrdenarMapaAsignados');
+    if(!btn) return;
+
+    modoOrdenar = true;
+    modoOrdenModalAsignados = true;
+
+    document.getElementById('btnGuardarOrdenAsignados').disabled = false;
+
+    ordenModalAsignados = [];
+
+    marcadoresModalAsignados.forEach(m=>{
+        m.setLabel('');
+    });
+
+    Swal.fire(
+        'Modo orden activado',
+        'Seleccione los puntos en el mapa en el orden deseado',
+        'info'
+    );
+
+});
+
+
+
+
 </script>
+
+
 
 
 
@@ -1444,7 +1628,135 @@ document.addEventListener('click', function (e) {
 
 
 });
+
 </script>
+
+
+
+<script>
+
+document.addEventListener('click',function(e){
+
+    const btn = e.target.closest('.btn-ver-mapa-asignados');
+    if(!btn) return;
+
+    const motoqueroId = btn.dataset.motoquero;
+
+    const modal = new bootstrap.Modal(document.getElementById('modalMapaAsignados'));
+    modal.show();
+
+    setTimeout(()=>{
+        cargarMapaAsignadosModal(motoqueroId);
+    },300);
+
+});
+
+
+document.addEventListener('click',function(e){
+
+    const btn = e.target.closest('#btnGuardarOrdenAsignados');
+    if(!btn) return;
+
+    const orden = ordenModalAsignados.map((m,i)=>({
+        id: m.pedidoId,
+        posicion: i+1
+    }));
+
+    fetch("{{ url('/admin/pedidos/ordenar') }}",{
+        method:'POST',
+        headers:{
+            'Content-Type':'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({orden})
+    })
+    .then(()=>{
+
+        Swal.fire(
+            'Orden guardado',
+            'Los pedidos fueron reordenados',
+            'success'
+        ).then(()=>{
+            location.reload();
+        });
+
+    });
+
+});
+
+
+
+document.addEventListener('click', function(e){
+
+    const boton = e.target.closest('.btnEditarEntrega');
+
+    if(!boton) return;
+
+    const id = boton.dataset.id;
+
+    document.getElementById('edit_entregado_id').value = id;
+
+    fetch(`/admin/pedidos/${id}/metodo-pago`)
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById('metodo_actual').innerText = data.metodo_pago;
+
+        document.getElementById('edit_entregado_pago').value = data.metodo_pago;
+
+        $('#modalEditarEntrega').modal('show');
+
+    });
+
+});
+
+
+document.addEventListener('click', function(e){
+
+    const btn = e.target.closest('#btnGuardarEntrega');
+    if(!btn) return;
+
+    const id = document.getElementById('edit_entregado_id').value;
+    const metodo = document.getElementById('edit_entregado_pago').value;
+
+    fetch(`/admin/pedidos/${id}/actualizar-entrega`,{
+
+        method:'POST',
+
+        headers:{
+            'Content-Type':'application/json',
+            'X-CSRF-TOKEN':document
+                .querySelector('meta[name="csrf-token"]').content
+        },
+
+        body:JSON.stringify({
+            metodo_pago:metodo
+        })
+
+    })
+    .then(res=>res.json())
+    .then(data=>{
+
+        if(data.success){
+
+            Swal.fire(
+                'Actualizado',
+                'Método de pago actualizado',
+                'success'
+            ).then(()=>{
+                location.reload();
+            });
+
+        }
+
+    });
+
+});
+
+
+
+</script>
+
 
 
 <script>
@@ -1567,19 +1879,35 @@ function refrescarPanelMotoquero(motoqueroId) {
 
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar SortableJS en listas por asignar y asignado
+
     document.querySelectorAll('.lista-por-asignar, .lista-asignado').forEach(function(el){
 
+        // 🛑 No inicializar si no hay pedidos
+        if (el.querySelectorAll('.pedido-item').length === 0) {
+            return;
+        }
+
         new Sortable(el, {
+
+            // ✅ SOLO se pueden arrastrar pedidos
+            draggable: '.pedido-item',
+
             group: {
                 name: 'solo-orden',
                 pull: false,
                 put: false
             },
+
             animation: 150,
             ghostClass: 'dragging',
+
+            // 📱 Mejor comportamiento en celular
+            delay: 200,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 6,
 
             onMove: function (evt) {
 
@@ -1592,6 +1920,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             onEnd: function(evt){
 
+                // 🛑 Ignorar si no es pedido
+                if (!evt.item.classList.contains('pedido-item')) {
+                    return;
+                }
+
                 // 🛑 Seguridad extra
                 if (evt.from !== evt.to) {
                     evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex]);
@@ -1601,12 +1934,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 let lista = evt.to;
 
                 lista.querySelectorAll('.pedido-item').forEach((item,index)=>{
-                    item.querySelector('b').textContent = '#' + (index + 1);
+                    const numero = item.querySelector('b');
+                    if(numero){
+                        numero.textContent = '#' + (index + 1);
+                    }
                 });
 
                 let orden = [];
+
                 lista.querySelectorAll('.pedido-item').forEach((item,index)=>{
-                    orden.push({id: item.dataset.id, posicion: index + 1});
+                    orden.push({
+                        id: item.dataset.id,
+                        posicion: index + 1
+                    });
                 });
 
                 fetch("{{ url('/admin/pedidos/ordenar') }}", {
@@ -1626,15 +1966,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (mapas[motoqueroId]) {
                     cargarMapaPorAsignar(motoqueroId, ruta);
                 }
+
             }
+
         });
 
     });
-    
 
     actualizarBotonEmergencia();
 
 });
+
+
 
     // === BOTÓN: "Por asignar → Asignado" dentro de POR ASIGNAR (admin)
         $(document).on('click', '.btn_asignar_todos', function () {
@@ -1657,7 +2000,7 @@ document.addEventListener('DOMContentLoaded', function() {
             success: function () {
              Swal.fire({
                 icon: 'success',
-                title: 'Pedidos de ruta ${ruta} asignados',
+                title: `Pedidos de ruta ${ruta} asignados`,
                 timer: 900,
                 showConfirmButton: false
                 }).then(() => location.reload());
@@ -1782,9 +2125,9 @@ document.addEventListener('click', function (e) {
         const lat = parseFloat(cardMapa.dataset.lat);
         const lng = parseFloat(cardMapa.dataset.lng);
 
-        if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-            mapaGeneralPedidos.setCenter({ lat, lng });
-            mapaGeneralPedidos.setZoom(17);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            mapaGeneral.setCenter({ lat, lng });
+            mapaGeneral.setZoom(17);
         }
     }
 
@@ -2128,7 +2471,7 @@ let colaMotoqueros = []; // temporal
 
 // 🔄 Polling cada 5 segundos
 setInterval(() => {
-    fetch('/admin/pedidos/motoqueros/ubicaciones', {
+    fetch("{{ route('admin.pedidos.motoqueros.ubicaciones') }}", {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
@@ -2141,7 +2484,7 @@ setInterval(() => {
         if (!Array.isArray(data)) return;
 
         if (!mapaGeneralListo) {
-            colaMotoqueros = data;
+            colaMotoqueros.push(...data);
         } else {
             data.forEach(actualizarMotoqueroEnMapa);
         }
@@ -2631,6 +2974,110 @@ document.addEventListener('change', function(e) {
         </div>
     </div>
 </div>
+
+
+
+<div class="modal fade" id="modalMapaAsignados" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Mapa de pedidos asignados</h5>
+                <button type="button" class="btn-close" data-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="mapa-asignados-modal" style="height:500px;"></div>
+
+                <div class="mt-3 text-center">
+                    <button class="btn btn-warning btn-sm" id="btnOrdenarMapaAsignados">
+                        Ordenar pedidos
+                    </button>
+
+                    <button class="btn btn-success btn-sm" id="btnGuardarOrdenAsignados" disabled>
+                        Guardar orden
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="modal fade" id="modalEditarEntrega" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Editar método de pago
+                </h5>
+
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- ID del pedido -->
+                <input type="hidden" id="edit_entregado_id">
+
+                <!-- Metodo actual -->
+                <div class="form-group">
+                    <label><b>Método actual</b></label>
+
+                    <div style="
+                        padding:8px;
+                        background:#f1f1f1;
+                        border-radius:6px;
+                        font-weight:bold;
+                    ">
+                        <span id="metodo_actual">...</span>
+                    </div>
+                </div>
+
+                <!-- Cambiar metodo -->
+                <div class="form-group">
+                    <label>Cambiar método de pago</label>
+
+                    <select class="form-control" id="edit_entregado_pago">
+                        <option value="">Seleccione método</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="QR">QR</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    id="btnGuardarEntrega">
+                    Guardar cambio
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 
 @stop
 <script>

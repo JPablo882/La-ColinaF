@@ -153,7 +153,17 @@
             <div class="pedido-card" data-id="{{ $pedido->id }}" data-cliente="{{ $pedido->cliente->id }}">
                 <div class="pedido-header">
                     <h5><b>{{ $pedido->cliente->nombre }}</b></h5>
-                    <span class="badge badge-warning">{{ $pedido->estado }}</span>
+
+                    <div>
+
+                        @if($pedido->emergencia)
+                            <span style="color:red;font-size:20px;">🚨</span>
+                        @endif
+
+                        <span class="badge badge-warning">{{ $pedido->estado }}</span>
+
+                    </div>
+
                 </div>
 
                 <p><b>Ubicación GPS:</b>
@@ -318,12 +328,41 @@
             @endif
         </div>
 
+
+        
+        <div style="display:flex; justify-content:center; margin-bottom:30px;">
+            
+            <button 
+                type="button"
+                data-toggle="modal"
+                data-target="#reporteModal"
+                class="btn btn-success"
+                style="padding:10px 25px; font-weight:600;">
+                
+                Ver reporte del día
+                
+            </button>
+
+        </div>
+
+
         <div class="scroll-entregados">
             @forelse($pedidos_entregados as $pedido)
                 <div class="pedido-card" data-cliente="{{ $pedido->cliente->id }}">
                     <div class="pedido-header">
                         <h5><b>{{ $pedido->cliente->nombre }}</b></h5>
-                        <span class="badge badge-success">{{ $pedido->estado }}</span>
+
+                        <div>
+
+                            @if($pedido->emergencia)
+                                <span style="color:red;font-size:20px;">🚨</span>
+                            @endif
+
+                            <span class="badge badge-success">{{ $pedido->estado }}</span>
+
+                        </div>
+
+                        
                     </div>
 
                     <p><b>Ubicación GPS:</b>
@@ -457,6 +496,156 @@
 <audio id="sound-no-contesta" src="{{ asset('sounds/no_contesta.mp3') }}"></audio>
 
 
+<div class="modal fade"
+     id="reporteModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+<div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+<div class="modal-content">
+
+<div class="modal-header">
+
+<h5 class="modal-title">
+Reporte de ventas del día
+</h5>
+
+<button type="button"
+        class="btn-close"
+        data-dismiss="modal">
+</button>
+
+</div>
+
+<div class="modal-body">
+
+@php
+
+$fecha = request('fecha') ?? now()->toDateString();
+
+$pedidos = \App\Models\Pedido::with('cliente')
+    ->where('motoquero_id', auth()->user()->motoquero->id)
+    ->where('estado','Entregado')
+    ->whereDate('updated_at',$fecha)
+    ->orderBy('updated_at','asc')
+    ->get();
+
+$ingresoEfectivo = $pedidos
+    ->where('metodo_pago','Efectivo')
+    ->sum('total_precio');
+
+$ingresoQR = $pedidos
+    ->where('metodo_pago','QR')
+    ->sum('total_precio');
+
+$ingresoTotal = $pedidos->sum('total_precio');
+
+@endphp
+
+{{-- RESUMEN --}}
+<div class="row mb-4 text-end">
+
+<div class="col-md-4">
+<strong>Total efectivo</strong><br>
+{{ number_format($ingresoEfectivo,2) }} Bs
+</div>
+
+<div class="col-md-4">
+<strong>Total QR</strong><br>
+{{ number_format($ingresoQR,2) }} Bs
+</div>
+
+<div class="col-md-4">
+<strong>Ingreso total</strong><br>
+{{ number_format($ingresoTotal,2) }} Bs
+</div>
+
+</div>
+
+
+{{-- TABLA --}}
+<table class="table table-bordered table-sm">
+
+<thead class="table-light">
+
+<tr>
+
+<th>#</th>
+<th>Cliente</th>
+<th>Total</th>
+<th>Método</th>
+<th>Hora</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+@forelse($pedidos as $pedido)
+
+<tr>
+
+<td>{{ $loop->iteration }}</td>
+
+<td>
+{{ $pedido->cliente->nombre ?? 'Sin cliente' }}
+</td>
+
+<td>
+{{ number_format($pedido->total_precio,2) }}
+</td>
+
+<td>
+
+@if($pedido->metodo_pago == 'QR')
+
+<span class="badge badge-success">
+QR
+</span>
+
+@else
+
+<span class="badge badge-primary">
+Efectivo
+</span>
+
+@endif
+
+</td>
+
+<td>
+{{ $pedido->updated_at->format('H:i') }}
+</td>
+
+</tr>
+
+@empty
+
+<tr>
+
+<td colspan="5" class="text-center text-muted">
+No hay pedidos entregados hoy
+</td>
+
+</tr>
+
+@endforelse
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
 @stop
 
 @section('css')
@@ -519,6 +708,49 @@
 .tabla-entregados {font-size: 12px;}
 .tabla-entregados th,
 .tabla-entregados td {padding: 3px 4px;}}
+
+
+/* ===== TEXTOS MÁS FUERTES EN PEDIDOS ===== */
+
+.pedido-card p,
+.pedido-card li,
+.pedido-card span,
+.pedido-card b {
+    color: #000 !important;
+    font-weight: 600;
+}
+
+/* Precio referencia */
+[data-precio-box] {
+    font-weight: 600;
+    color: #000;
+}
+
+/* Última compra */
+.pedido-card ul li {
+    font-weight: 600;
+}
+
+/* descripción */
+.pedido-card p {
+    margin-bottom: 6px;
+}
+
+
+/* ===== MODAL FINALIZAR ENTREGA ===== */
+
+.tabla-finalizar th,
+.tabla-finalizar td {
+    font-weight: 600;
+    color: #000;
+}
+
+.tabla-finalizar select,
+.tabla-finalizar input {
+    font-weight: 600;
+    color: #000;
+}
+
 </style>
 @stop
 
@@ -591,12 +823,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-
     // Función para crear fila nueva
     function crearFila() {
         const fila = document.createElement('tr');
 
         let options = '<option value="">Seleccione...</option>';
+
         @foreach($productos as $prod)
             options += `<option value="{{ $prod->id }}">{{ $prod->nombre }}</option>`;
         @endforeach
@@ -633,6 +865,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tabla.appendChild(fila);
     }
 
+
     // Agregar fila
     document.getElementById('agregarFila').addEventListener('click', function() {
         const cliente_id = document.getElementById('modal_cliente_id').value;
@@ -657,6 +890,8 @@ document.addEventListener('DOMContentLoaded', function () {
         totalGeneralInput.value = "0.00";
     });
 });
+
+
 </script>
 
 <script>
@@ -1070,64 +1305,115 @@ setInterval(() => {
 </script>
 
 
-
 <script>
 let watchId = null;
 let ultimaPosicion = null;
-</script>
+let ultimoEnvio = 0;
 
-<script>
 function iniciarTrackingMotoquero(motoqueroId) {
 
     if (!navigator.geolocation) {
-        alert('GPS no soportado en este dispositivo');
+        console.error('GPS no soportado');
         return;
     }
 
+    // evitar duplicar watchPosition
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+    }
+
     watchId = navigator.geolocation.watchPosition(
+
         position => {
 
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             const accuracy = position.coords.accuracy;
 
+            const ahora = Date.now();
+
+            // evitar spam al servidor
+            if (ahora - ultimoEnvio < 4000) {
+                return;
+            }
+
+            ultimoEnvio = ahora;
+
+            // evitar enviar si no cambió posición
+            if (ultimaPosicion) {
+
+                const distancia =
+                    Math.abs(lat - ultimaPosicion.lat) +
+                    Math.abs(lng - ultimaPosicion.lng);
+
+                if (distancia < 0.00005) {
+                    return;
+                }
+            }
+
             ultimaPosicion = { lat, lng };
 
             enviarUbicacionServidor(motoqueroId, lat, lng, accuracy);
 
         },
+
         error => {
+
             console.error('Error GPS:', error);
+
+            if (error.code === error.PERMISSION_DENIED) {
+                alert('Debes permitir el acceso al GPS');
+            }
+
         },
+
         {
             enableHighAccuracy: true,
-            maximumAge: 5000,
-            timeout: 10000
+            maximumAge: 0,
+            timeout: 15000
         }
-    );
-}
-</script>
 
-<script>
+    );
+
+    // 🔥 respaldo por si watchPosition se congela
+    setInterval(() => {
+
+        if (!ultimaPosicion) return;
+
+        enviarUbicacionServidor(
+            motoqueroId,
+            ultimaPosicion.lat,
+            ultimaPosicion.lng,
+            0
+        );
+
+    }, 15000);
+}
+
+
 function enviarUbicacionServidor(motoqueroId, lat, lng, accuracy) {
 
-    fetch('/motoquero/ubicacion', {
+    fetch("{{ route('admin.motoquero.ubicacion') }}", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document
-                .querySelector('meta[name="csrf-token"]').content
+            'X-CSRF-TOKEN':
+                document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify({
             motoquero_id: motoqueroId,
             latitud: lat,
             longitud: lng,
-            accuracy: accuracy
+            accuracy: accuracy,
+            timestamp: Date.now()
         })
     })
     .catch(err => console.error('Error enviando ubicación', err));
 }
+
+
 </script>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

@@ -236,11 +236,11 @@ Route::get('/admin/pedidos/mapa-por-asignar', [PedidoController::class, 'mapaPor
 
 
 
-Route::post('/motoquero/ubicacion', [MotoqueroUbicacionController::class, 'store'])->middleware('auth');
+Route::post('admin/motoquero/ubicacion', [MotoqueroUbicacionController::class, 'store'])->name('admin.motoquero.ubicacion')->middleware('auth');
 
-Route::get('/admin/pedidos/motoqueros/ubicaciones', [MotoqueroUbicacionController::class, 'ultimas'])->middleware('auth');
+Route::get('/admin/pedidos/motoqueros/ubicaciones', [MotoqueroUbicacionController::class, 'ultimas'])->name('admin.pedidos.motoqueros.ubicaciones')->middleware('auth');
 
-Route::get('/admin/pedidos/motoquero/{id}/recorrido', [MotoqueroUbicacionController::class, 'recorrido'])->middleware('auth');
+Route::get('/admin/pedidos/motoquero/{id}/recorrido', [MotoqueroUbicacionController::class, 'recorrido'])->name('admin.pedidos.motoquero.recorrido')->middleware('auth');
 
 
 
@@ -332,3 +332,10 @@ Route::post('/admin/notificaciones', [NotificacionController::class, 'update'])-
 Route::post('/admin/clientes/{cliente}/toggle-notificacion', [App\Http\Controllers\ClienteController::class, 'toggleNotificacion'])->middleware('auth');
 
 Route::post('/admin/pedidos/{pedido}/toggle-notificacion', [App\Http\Controllers\PedidoController::class, 'toggleNotificacion'])->middleware('auth');
+
+
+Route::get('/admin/pedidos/mapa-asignados', [PedidoController::class,'mapaAsignados'])->middleware('auth');
+
+Route::get('/admin/pedidos/{id}/metodo-pago', [PedidoController::class,'obtenerMetodoPago'])->middleware('auth');
+
+Route::post('/admin/pedidos/{id}/actualizar-entrega', [PedidoController::class,'actualizarEntrega'])->middleware('auth');

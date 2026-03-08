@@ -124,6 +124,7 @@
                             <tr>
                                 <th>Cliente</th>
                                 <th>Total</th>
+                                <th>Método de pago</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -131,6 +132,31 @@
                             <tr>
                                 <td>{{ $pedido->cliente->nombre ?? '—' }}</td>
                                 <td>{{ number_format($pedido->total_precio, 2) }}</td>
+
+                                <td>
+
+                                    @if($pedido->metodo_pago == 'QR')
+
+                                        <span class="badge badge-success">
+                                            QR
+                                        </span>
+
+                                    @elseif($pedido->metodo_pago == 'Efectivo')
+
+                                        <span class="badge badge-primary">
+                                            Efectivo
+                                        </span>
+
+                                    @else
+
+                                        <span class="badge badge-secondary">
+                                            No definido
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
                             </tr>
                         @endforeach
                         </tbody>
