@@ -1362,8 +1362,14 @@ function iniciarTrackingMotoquero(motoqueroId) {
             console.error('Error GPS:', error);
 
             if (error.code === error.PERMISSION_DENIED) {
-                alert('Debes permitir el acceso al GPS');
-            }
+
+    if (!sessionStorage.getItem('gps_alert')) {
+
+        alert('Debes permitir el acceso al GPS');
+
+        sessionStorage.setItem('gps_alert', 'true');
+    }
+}
 
         },
 
