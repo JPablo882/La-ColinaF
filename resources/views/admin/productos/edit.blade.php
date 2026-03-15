@@ -10,7 +10,7 @@
 @section('content')
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('productos.update', $producto->id) }}" method="POST">
+            <form action="{{ route('admin.productos.update', $producto->id) }}" method="POST">
                 @csrf
                 @method('PUT')
 
@@ -27,7 +27,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary">💾 Actualizar</button>
-                <a href="{{ route('productos.index') }}" class="btn btn-secondary">↩️ Volver</a>
+                <a href="{{ route('admin.productos.index') }}" class="btn btn-secondary">↩️ Volver</a>
             </form>
         </div>
     </div>

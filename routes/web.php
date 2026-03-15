@@ -170,10 +170,11 @@ Route::delete('/admin/pedidos/tmp/{id}', [TmpPedidoController::class, 'destroy']
 Route::get('/admin/productos', [ProductoController::class, 'index'])->name('admin.productos.index')->middleware('auth', 'can:admin.productos.index');
 Route::get('/admin/productos/create', [ProductoController::class, 'create'])->name('admin.productos.create')->middleware('auth', 'can:admin.productos.create');
 Route::post('/admin/productos/create', [ProductoController::class, 'store'])->name('admin.productos.store')->middleware('auth', 'can:admin.productos.store');
-Route::get('/admin/productos/{id}', [ProductoController::class, 'show'])->name('admin.productos.show')->middleware('auth', 'can:admin.productos.show');
-Route::get('/admin/productos/{id}/edit', [ProductoController::class, 'edit'])->name('admin.productos.edit')->middleware('auth', 'can:admin.productos.edit');
-Route::put('/admin/productos/{id}', [ProductoController::class, 'update'])->name('admin.productos.update')->middleware('auth', 'can:admin.productos.update');
-Route::delete('/admin/productos/{id}', [ProductoController::class, 'destroy'])->name('admin.productos.destroy')->middleware('auth', 'can:admin.productos.destroy');
+Route::get('/admin/productos/{producto}', [ProductoController::class, 'show'])->name('admin.productos.show')->middleware('auth', 'can:admin.productos.show');
+Route::get('/admin/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('admin.productos.edit')->middleware('auth', 'can:admin.productos.edit');
+Route::put('/admin/productos/{producto}', [ProductoController::class, 'update'])->name('admin.productos.update')->middleware('auth', 'can:admin.productos.update');
+Route::delete('/admin/productos/{producto}', [ProductoController::class, 'destroy'])->name('admin.productos.destroy')->middleware('auth', 'can:admin.productos.destroy');
+
 
 
 

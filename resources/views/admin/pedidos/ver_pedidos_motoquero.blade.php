@@ -8,6 +8,37 @@
 @section('content')
 
 
+{{-- MAPA PEDIDOS NUEVOS --}}
+<div class="card mb-4">
+
+    <div class="card-header d-flex justify-content-between align-items-center">
+
+        <h3 class="card-title mb-0">Mapa de pedidos</h3>
+
+        <button id="btnToggleMapa"
+                class="btn btn-sm btn-primary"
+                onclick="toggleMapa()">
+            Ocultar mapa
+        </button>
+
+    </div>
+
+
+    <div class="card-body">
+
+        <div id="contenedorMapaPedidos">
+
+            <div id="mapaPedidosAsignados"
+                style="width:100%; height:400px; border-radius:8px;">
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
 {{-- ===== PEDIDOS NUEVOS ===== --}}
 <div id="contenedor-pedidos-nuevos">
 
@@ -51,6 +82,58 @@
                     <p><b>Descripción:</b>
                         {{ $pedido->cliente->direccion ?? $pedido->direccion_entrega }}
                     </p>
+
+
+
+                    {{-- 📷 IMAGEN CASA CLIENTE --}}
+                    <div class="mt-2 p-2" style="background:#f4f6f9; border-radius:8px;">
+
+                        <b>Imagen de referencia:</b>
+
+                        <div style="margin-top:8px;">
+
+                            @if($pedido->cliente->imagen_casa)
+                                <img src="{{ asset('storage/'.$pedido->cliente->imagen_casa) }}"
+                                    class="imagen-casa-preview"
+                                    data-cliente="{{ $pedido->cliente->id }}"
+                                    style="width:120px;height:120px;object-fit:cover;
+                                            border-radius:8px;cursor:pointer;
+                                            border:1px solid #ddd;">
+                            @else
+                                <div class="imagen-casa-preview"
+                                    data-cliente="{{ $pedido->cliente->id }}"
+                                    style="width:120px;height:120px;background:#e9ecef;
+                                            display:flex;align-items:center;justify-content:center;
+                                            border-radius:8px;cursor:pointer;
+                                            border:1px dashed #bbb;">
+                                    Sin imagen
+                                </div>
+                            @endif
+
+                            <form class="form-imagen-casa"
+                                data-cliente="{{ $pedido->cliente->id }}"
+                                action="{{ route('admin.clientes.imagen', $pedido->cliente->id) }}"
+                                enctype="multipart/form-data"
+                                style="display:none;">
+
+                                @csrf
+                                <input type="file"
+                                    name="imagen_casa"
+                                    accept="image/*"
+                                    capture="environment">
+                            </form>
+
+                            <div style="margin-top:6px;">
+                                <button type="button"
+                                        class="btn btn-sm btn-primary btn-subir-imagen"
+                                        data-cliente="{{ $pedido->cliente->id }}">
+                                    {{ $pedido->cliente->imagen_casa ? 'Cambiar Imagen' : 'Agregar Imagen' }}
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                    {{-- FIN IMAGEN CASA --}}
 
                     
                                     {{-- 🟢 PRECIO REFERENCIA (dinámico por cliente) --}}
@@ -113,6 +196,9 @@
 
                             <button type="submit"
                                     class="btn btn-info btn-sm btn-navegar"
+                                    data-id="{{ $pedido->id }}"
+                                    data-cliente="{{ $pedido->cliente->nombre }}"
+                                    data-orden="{{ $pedido->orden }}"
                                     data-lat="{{ $pedido->cliente->latitud ?? '-'}}"
                                     data-lng="{{ $pedido->cliente->longitud ?? '-'}}">
                                 <i class="fas fa-motorcycle"></i> Iniciar Navegación
@@ -120,14 +206,24 @@
 
                         </form>
 
-                        <form action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/rechazar_pedido') }}"
-                              method="post">
+                        <form id="formRechazar{{ $pedido->id }}"
+                            action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/rechazar_pedido') }}"
+                            method="post">
+
                             @csrf
+
                             <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
-                            <button type="submit" class="btn btn-danger btn-sm">
+
+                            <button type="button"
+                                    class="btn btn-danger btn-sm btn-rechazar"
+                                    data-form="formRechazar{{ $pedido->id }}">
+
                                 <i class="fas fa-times"></i> Rechazar pedido
+
                             </button>
+
                         </form>
+
                     </div>
 
                 </div>
@@ -150,7 +246,7 @@
         @endphp
 
         @forelse($pedidosCaminoOrdenados as $pedido)
-            <div class="pedido-card" data-id="{{ $pedido->id }}" data-cliente="{{ $pedido->cliente->id }}">
+            <div class="pedido-card"  id="pedido-{{ $pedido->id }}"  data-id="{{ $pedido->id }}" data-cliente="{{ $pedido->cliente->id }}">
                 <div class="pedido-header">
                     <h5><b>{{ $pedido->cliente->nombre }}</b></h5>
 
@@ -177,7 +273,7 @@
                 <p><b>Descripción:</b> {{ $pedido->cliente->direccion ?? $pedido->direccion_entrega }}</p>
                 
 
-                {{-- 📷 IMAGEN CASA CLIENTE --}}
+                    {{-- 📷 IMAGEN CASA CLIENTE --}}
                     <div class="mt-2 p-2" style="background:#f4f6f9; border-radius:8px;">
 
                         <b>Imagen de referencia:</b>
@@ -278,22 +374,32 @@
                 @endphp
 
                 
-                    <a href="https://wa.me/59163524474?text={{ $msgLlegué }}" target="_blank" class="btn btn-success btn-sm">
+                    <a href="https://wa.me/59163524474?text={{ $msgLlegué }}" onclick="marcarPedidoEntregando({{ $pedido->id }})" target="_blank" class="btn btn-success btn-sm">
                         <i class="fab fa-whatsapp"></i> Chat Central
                     </a>
                 
                     <button class="btn btn-warning btn-sm"
-                        onclick="solicitarLlamada({{ $pedido->cliente->id }}, '{{ $pedido->cliente->nombre }}', '{{ $pedido->cliente->celular_real }}', '{{ auth()->user()->name }}', '{{ $pedido->motoquero_id }}')">
+                        onclick="marcarPedidoEntregando({{ $pedido->id }}); solicitarLlamada({{ $pedido->cliente->id }}, '{{ $pedido->cliente->nombre }}', '{{ $pedido->cliente->celular_real }}', '{{ auth()->user()->name }}', '{{ $pedido->motoquero_id }}')">
                         <i class="fas fa-phone"></i> Hacer Llamar
                     </button>
 
                 <div class="pedido-acciones">
-                    <form action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/rechazar_pedido') }}" method="post">
+                    <form id="formRechazar{{ $pedido->id }}"
+                        action="{{ url('/admin/pedidos/motoquero/'.$motoquero->id.'/rechazar_pedido') }}"
+                        method="post">
+
                         @csrf
+
                         <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="fas fa-times"></i> Rechazar
+
+                        <button type="button"
+                                class="btn btn-danger btn-sm btn-rechazar"
+                                data-form="formRechazar{{ $pedido->id }}">
+
+                            <i class="fas fa-times"></i> Rechazar pedido
+
                         </button>
+
                     </form>
 
                     <button class="btn btn-success btn-sm" data-bs-toggle="modal"
@@ -715,52 +821,40 @@ No hay pedidos entregados hoy
 .pedido-card p,
 .pedido-card li,
 .pedido-card span,
-.pedido-card b {
-    color: #000 !important;
-    font-weight: 600;
-}
+.pedido-card b { color: #000 !important; font-weight: 600;}
 
 /* Precio referencia */
-[data-precio-box] {
-    font-weight: 600;
-    color: #000;
-}
+[data-precio-box] { font-weight: 600; color: #000;}
 
 /* Última compra */
-.pedido-card ul li {
-    font-weight: 600;
-}
+.pedido-card ul li { font-weight: 600;}
 
 /* descripción */
-.pedido-card p {
-    margin-bottom: 6px;
-}
-
+.pedido-card p { margin-bottom: 6px;}
 
 /* ===== MODAL FINALIZAR ENTREGA ===== */
-
 .tabla-finalizar th,
-.tabla-finalizar td {
-    font-weight: 600;
-    color: #000;
-}
-
+.tabla-finalizar td { font-weight: 600; color: #000;}
 .tabla-finalizar select,
-.tabla-finalizar input {
-    font-weight: 600;
-    color: #000;
-}
+.tabla-finalizar input { font-weight: 600; color: #000;}
+.pedido-entregando { border: 3px solid #6f4e37 !important; background-color: #f3e5d8; position: relative;}
+.badge-entregando { position: absolute; top: -10px; left: 10px; background: #6f4e37; color: white; padding: 4px 10px; font-size: 11px; border-radius: 4px;}
 
 </style>
 @stop
 
 @section('js')
+
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}">
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tabla = document.querySelector('#tablaProductos tbody');
     const totalGeneralInput = document.getElementById('totalGeneral');
-
 
     // Función para actualizar total de una fila
     function actualizarFilaTotal(fila) {
@@ -1005,6 +1099,10 @@ document.addEventListener('submit', function (e) {
     // ========================
     enviarAvisoDeNavegacion(pedidoId, cliente, celular, motoqueroId);
 
+
+
+
+
     // ========================
     // GUARDAR COORDENADAS
     // ========================
@@ -1012,6 +1110,37 @@ document.addEventListener('submit', function (e) {
         sessionStorage.setItem('nav_lat', lat);
         sessionStorage.setItem('nav_lng', lng);
     }
+
+    // marcar que debemos hacer scroll cuando vuelva la página
+    sessionStorage.setItem('scroll_en_camino', '1');
+
+});
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const scrollPendiente = sessionStorage.getItem('scroll_en_camino');
+
+    if(scrollPendiente === '1'){
+
+        sessionStorage.removeItem('scroll_en_camino');
+
+        setTimeout(() => {
+
+            const seccion = document.querySelector('.card-warning');
+
+            if (seccion) {
+                seccion.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+
+        }, 800);
+
+    }
+
 });
 
 
@@ -1186,7 +1315,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const actual = document.querySelector('#contenedor-pedidos-nuevos');
 
             if (nuevo && actual) {
+
                 actual.innerHTML = nuevo.innerHTML;
+
+                // 🔄 actualizar mapa con nuevos pedidos
+                actualizarMarcadoresMapa();
+
             }
 
         })
@@ -1357,21 +1491,28 @@ function iniciarTrackingMotoquero(motoqueroId) {
 
         },
 
+
+        let gpsErrorMostrado = false;
+
         error => {
 
             console.error('Error GPS:', error);
 
-            if (error.code === error.PERMISSION_DENIED) {
+            if (error.code === error.PERMISSION_DENIED && !gpsErrorMostrado) {
 
-    if (!sessionStorage.getItem('gps_alert')) {
+                gpsErrorMostrado = true;
 
-        alert('Debes permitir el acceso al GPS');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'GPS desactivado',
+                    text: 'Debes permitir el acceso al GPS para que el sistema funcione correctamente',
+                    confirmButtonColor: '#3085d6'
+                });
 
-        sessionStorage.setItem('gps_alert', 'true');
-    }
-}
+            }
 
         },
+
 
         {
             enableHighAccuracy: true,
@@ -1423,8 +1564,37 @@ function enviarUbicacionServidor(motoqueroId, lat, lng, accuracy) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    iniciarTrackingMotoquero({{ auth()->user()->motoquero->id }});
+
+    const motoqueroId = {{ auth()->user()->motoquero->id }};
+
+    if (!navigator.permissions) {
+        iniciarTrackingMotoquero(motoqueroId);
+        return;
+    }
+
+    navigator.permissions.query({ name: 'geolocation' })
+        .then(function(permissionStatus) {
+
+            if (permissionStatus.state === 'granted') {
+
+                // Ya tiene permiso
+                iniciarTrackingMotoquero(motoqueroId);
+
+            } else if (permissionStatus.state === 'prompt') {
+
+                // Solo una vez pedirá permiso
+                iniciarTrackingMotoquero(motoqueroId);
+
+            } else if (permissionStatus.state === 'denied') {
+
+                console.warn("GPS bloqueado por el usuario");
+
+            }
+
+        });
+
 });
+
 </script>
 
 
@@ -1550,33 +1720,44 @@ setInterval(checkAvisos, 5000);
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    document.querySelectorAll('[data-precio-box]').forEach(box => {
+    function cargarPrecios(){
 
-        const clienteId = box.dataset.cliente;
+        document.querySelectorAll('[data-precio-box]').forEach(box => {
 
-        function obtenerPrecio(productoId, claseSpan) {
+            if(box.dataset.cargado === "1") return;
 
-            fetch(`/admin/pedidos/precio-cliente/${clienteId}/${productoId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.precio) {
-                        box.querySelector(claseSpan).innerText = data.precio + ' Bs';
-                    } else {
+            const clienteId = box.dataset.cliente;
+
+            function obtenerPrecio(productoId, claseSpan) {
+
+                fetch(`/admin/pedidos/precio-cliente/${clienteId}/${productoId}`)
+                    .then(res => res.json())
+                    .then(data => {
+
+                        if (data && data.precio) {
+                            box.querySelector(claseSpan).innerText = data.precio + ' Bs';
+                        } else {
+                            box.querySelector(claseSpan).innerText = '—';
+                        }
+
+                    })
+                    .catch(() => {
                         box.querySelector(claseSpan).innerText = '—';
-                    }
-                })
-                .catch(() => {
-                    box.querySelector(claseSpan).innerText = '—';
-                });
-        }
+                    });
+            }
 
-        // Producto ID 1 → Agua normal
-        obtenerPrecio(1, '.precio-id-1');
+            obtenerPrecio(1,'.precio-id-1');
+            obtenerPrecio(2,'.precio-id-2');
 
-        // Producto ID 2 → Agua alcalina
-        obtenerPrecio(2, '.precio-id-2');
+            box.dataset.cargado = "1";
 
-    });
+        });
+
+    }
+
+    cargarPrecios();
+
+    setInterval(cargarPrecios,4000);
 
 });
 </script>
@@ -1705,6 +1886,261 @@ document.addEventListener('click', function(e){
     if(e.target.id === 'modalImagenCasa'){
         document.getElementById('modalImagenCasa').style.display = 'none';
     }
+
+});
+</script>
+
+
+<script>
+function marcarPedidoEntregando(pedidoId){
+
+    // quitar resaltado anterior
+    document.querySelectorAll('.pedido-entregando').forEach(p => {
+
+        p.classList.remove('pedido-entregando');
+
+        const badge = p.querySelector('.badge-entregando');
+
+        if(badge){
+            badge.remove();
+        }
+
+    });
+
+    const pedido = document.getElementById('pedido-' + pedidoId);
+
+    if(!pedido) return;
+
+    pedido.classList.add('pedido-entregando');
+
+    const badge = document.createElement('div');
+    badge.className = "badge-entregando";
+    badge.innerText = "ENTREGANDO";
+
+    pedido.appendChild(badge);
+
+}
+</script>
+
+<script>
+
+const pedidosMapa = [
+
+@foreach($pedidosNuevos as $pedido)
+
+{
+    id: {{ $pedido->id }},
+    orden: {{ $pedido->orden }},
+    cliente: "{{ $pedido->cliente->nombre ?? 'Cliente' }}",
+    lat: {{ $pedido->cliente->latitud ?? 'null' }},
+    lng: {{ $pedido->cliente->longitud ?? 'null' }}
+},
+
+@endforeach
+
+];
+
+</script>
+
+
+<script>
+let mapaPedidos;
+let marcadoresMapa = [];
+
+function iniciarMapaPedidos(){
+
+    mapaPedidos = new google.maps.Map(
+        document.getElementById("mapaPedidosAsignados"),
+        {
+            center:{lat:-17.7833,lng:-63.1821},
+            zoom:12
+        }
+    );
+
+    const bounds = new google.maps.LatLngBounds();
+
+    pedidosMapa.forEach((p, index) => {
+
+        if(!p.lat || !p.lng) return;
+
+        const posicion = {
+            lat:parseFloat(p.lat),
+            lng:parseFloat(p.lng)
+        };
+
+        const marcador = new google.maps.Marker({
+            position:posicion,
+            map:mapaPedidos,
+            title:p.cliente,
+            label: {
+                text: p.orden.toString(),
+                color: "white",
+                fontWeight: "bold"
+            }
+
+        });
+
+        const info = new google.maps.InfoWindow({
+            content:`
+                <b>Orden ${p.orden}</b><br>
+                Pedido #${p.id}<br>
+                ${p.cliente}
+            `
+        });
+
+        marcador.addListener("click",()=>{
+            info.open(mapaPedidos,marcador);
+        });
+
+        bounds.extend(posicion);
+
+    });
+
+    if(!bounds.isEmpty()){
+        mapaPedidos.fitBounds(bounds);
+    }
+
+}
+
+
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    if(document.getElementById("mapaPedidosAsignados")){
+        iniciarMapaPedidos();
+    }
+
+});
+
+
+function actualizarMarcadoresMapa(){
+
+    if(!mapaPedidos) return;
+
+    // borrar marcadores anteriores
+    marcadoresMapa.forEach(m => m.setMap(null));
+    marcadoresMapa = [];
+
+    const bounds = new google.maps.LatLngBounds();
+
+    document.querySelectorAll('.btn-navegar').forEach(btn => {
+
+        const lat = btn.dataset.lat;
+        const lng = btn.dataset.lng;
+        const cliente = btn.dataset.cliente;
+        const orden = btn.dataset.orden || "?";
+
+        if(!lat || !lng || lat === '-' || lng === '-') return;
+
+        const posicion = {
+            lat: parseFloat(lat),
+            lng: parseFloat(lng)
+        };
+
+        const marker = new google.maps.Marker({
+            position: posicion,
+            map: mapaPedidos,
+            label:{
+                text:String(orden),
+                color:"white",
+                fontWeight:"bold"
+            }
+        });
+
+        const info = new google.maps.InfoWindow({
+            content:`<b>Orden ${orden}</b><br>${cliente}`
+        });
+
+        marker.addListener("mouseover",()=>{
+            info.open(mapaPedidos,marker);
+        });
+
+        marker.addListener("mouseout",()=>{
+            info.close();
+        });
+
+        marcadoresMapa.push(marker);
+
+        bounds.extend(posicion);
+
+    });
+
+    // centrar mapa solo si hay marcadores
+    if(marcadoresMapa.length > 0){
+        mapaPedidos.fitBounds(bounds);
+    }
+
+}
+
+
+function toggleMapa(){
+
+    const mapa = document.getElementById("contenedorMapaPedidos");
+    const boton = document.getElementById("btnToggleMapa");
+
+    if(mapa.style.display === "none"){
+
+        mapa.style.display = "block";
+        boton.innerText = "Ocultar mapa";
+
+        localStorage.setItem("mapaVisible","1");
+
+    }else{
+
+        mapa.style.display = "none";
+        boton.innerText = "Mostrar mapa";
+
+        localStorage.setItem("mapaVisible","0");
+
+    }
+
+}
+
+
+document.addEventListener("DOMContentLoaded", function(){
+
+    const estado = localStorage.getItem("mapaVisible");
+
+    if(estado === "0"){
+
+        document.getElementById("contenedorMapaPedidos").style.display = "none";
+        document.getElementById("btnToggleMapa").innerText = "Mostrar mapa";
+
+    }
+
+});
+
+
+
+</script>
+
+
+<script>
+
+document.addEventListener('click', function(e){
+
+    const btn = e.target.closest('.btn-rechazar');
+
+    if(!btn) return;
+
+    const formId = btn.dataset.form;
+
+    Swal.fire({
+        title: 'Rechazar pedido',
+        text: '¿Estás seguro de que deseas rechazar este pedido?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, rechazar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+            document.getElementById(formId).submit();
+        }
+
+    });
 
 });
 </script>

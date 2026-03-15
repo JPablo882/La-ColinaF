@@ -7,14 +7,23 @@ use Illuminate\Http\Request;
 
 class ProductoController extends Controller
 {
+
+    // LISTAR PRODUCTOS
     public function index()
     {
-       $productos = Producto::all();
-   //     return view('admin', compact('productos'));
-       return view('admin.productos.index', compact('productos'));
-
+        $productos = Producto::all();
+        return view('admin.productos.index', compact('productos'));
     }
 
+
+    // FORMULARIO CREAR PRODUCTO
+    public function create()
+    {
+        return view('admin.productos.create');
+    }
+
+
+    // GUARDAR PRODUCTO
     public function store(Request $request)
     {
         $request->validate([
@@ -22,19 +31,25 @@ class ProductoController extends Controller
             'precio' => 'required|numeric|min:0',
         ]);
 
-        Producto::create($request->only('nombre', 'precio'));
+        Producto::create([
+            'nombre' => $request->nombre,
+            'precio' => $request->precio,
+        ]);
 
-        return redirect()->back()->with('success', 'Producto creado correctamente.');
+        return redirect()
+            ->route('admin.productos.index')
+            ->with('success', 'Producto creado correctamente.');
     }
 
 
-        public function create()
+    // FORMULARIO EDITAR PRODUCTO
+    public function edit(Producto $producto)
     {
-        return view('admin.productos.create');
-         
+        return view('admin.productos.edit', compact('producto'));
     }
 
 
+    // ACTUALIZAR PRODUCTO
     public function update(Request $request, Producto $producto)
     {
         $request->validate([
@@ -42,14 +57,25 @@ class ProductoController extends Controller
             'precio' => 'required|numeric|min:0',
         ]);
 
-        $producto->update($request->only('nombre', 'precio'));
+        $producto->update([
+            'nombre' => $request->nombre,
+            'precio' => $request->precio,
+        ]);
 
-        return redirect()->back()->with('success', 'Producto actualizado correctamente.');
+        return redirect()
+            ->route('admin.productos.index')
+            ->with('success', 'Producto actualizado correctamente.');
     }
 
+
+    // ELIMINAR PRODUCTO
     public function destroy(Producto $producto)
     {
         $producto->delete();
-        return redirect()->back()->with('success', 'Producto eliminado correctamente.');
+
+        return redirect()
+            ->route('admin.productos.index')
+            ->with('success', 'Producto eliminado correctamente.');
     }
+
 }
