@@ -340,3 +340,7 @@ Route::get('/admin/pedidos/mapa-asignados', [PedidoController::class,'mapaAsigna
 Route::get('/admin/pedidos/{id}/metodo-pago', [PedidoController::class,'obtenerMetodoPago'])->middleware('auth');
 
 Route::post('/admin/pedidos/{id}/actualizar-entrega', [PedidoController::class,'actualizarEntrega'])->middleware('auth');
+
+
+Route::post('/admin/pedidos/{id}/qr-pagado-distribuidor', [PedidoController::class, 'marcarQrPagadoDistribuidor'])->middleware('auth');
+Route::post('/admin/pedidos/{id}/qr-pagado-central', [PedidoController::class, 'marcarQrPagadoCentral'])->middleware('auth');

@@ -69,11 +69,13 @@
                                         name="celular"
                                         value="{{ old('celular', $cliente->celular_real) }}"
                                         @if($cliente->cliente_padre_id !== null) readonly @endif
-                                        required>
-                                        
+                                        @if($cliente->cliente_padre_id === null) required @endif
+                                    >
                                 </div>
                                 @error('celular')
-                                    <span class="invalid-feedback" role="alert">{{ $message }}</span>
+                                    @if($cliente->cliente_padre_id === null)
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @endif
                                 @enderror
                             </div>
                         </div>

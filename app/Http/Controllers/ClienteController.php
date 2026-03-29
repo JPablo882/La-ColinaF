@@ -202,11 +202,17 @@ public function create()
             Rule::unique('clientes')->ignore($cliente->id),
         ],
 
-        'celular' => [
-            'required',
-            'digits_between:10,15',
-            Rule::unique('clientes')->ignore($cliente->id),
+
+        'celular' => is_null($cliente->cliente_padre_id)
+        ? [
+        'required',
+        'digits_between:10,15',
+        Rule::unique('clientes')->ignore($cliente->id),
+        ]
+        :[
+        'nullable'
         ],
+
 
         'referencia_celular' => [
             'nullable',

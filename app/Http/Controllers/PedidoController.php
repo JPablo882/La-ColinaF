@@ -949,6 +949,34 @@ public function actualizarEntrega(Request $request, $id)
 }
 
 
+public function marcarQrPagadoDistribuidor($id)
+{
+    $pedido = \App\Models\Pedido::findOrFail($id);
+
+    if (strtolower($pedido->metodo_pago) !== 'qr') {
+        return response()->json(['error' => 'No es QR'], 400);
+    }
+
+    $pedido->qr_pago_estado = 'distribuidor';
+    $pedido->save();
+
+    return response()->json(['ok' => true]);
+}
+
+
+public function marcarQrPagadoCentral($id)
+{
+    $pedido = \App\Models\Pedido::findOrFail($id);
+
+    if (strtolower($pedido->metodo_pago) !== 'qr') {
+        return response()->json(['error' => 'No es QR'], 400);
+    }
+
+    $pedido->qr_pago_estado = 'central';
+    $pedido->save();
+
+    return response()->json(['ok' => true]);
+}
 
 
 

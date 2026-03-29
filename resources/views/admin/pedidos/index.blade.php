@@ -886,12 +886,61 @@
                                     }
                                 @endphp
 
+
+                                @php
+                                    $totalQR = number_format($p->total_precio ?? 0, 2);
+                                    $mensajeQRDirecto = "/QR $totalQR Bs.";
+                                    $msgQR = urlencode($mensajeQRDirecto);
+                                @endphp
+
+
+                                 <div class="d-flex flex-wrap mt-1" style="gap:5px;">
+
+                                    {{-- BOTÓN RECIBO --}}
                                     <a href="https://wa.me/{{ $p->cliente->celular_real }}?text={{ $msgEntrega }}"
-                                    target="_blank"
-                                    class="btn btn-primary btn-sm mt-1 btn-recibo">
-                                        <i class="fab fa-whatsapp"></i> Enviar Recibo
+                                        target="_blank"
+                                        class="btn btn-primary py-0 px-2"
+                                        style="font-size:11px;">
+                                        <i class="fab fa-whatsapp"></i> Recibo
                                     </a>
 
+                                    @if(strtolower($p->metodo_pago) === 'qr')
+
+                                        @if(!$p->qr_pago_estado)
+
+                                            {{-- BOTÓN ENVIAR QR --}}
+                                            <a href="https://wa.me/{{ $p->cliente->celular_real }}?text={{ $msgQR }}"
+                                                target="_blank"
+                                                class="btn btn-warning py-0 px-2"
+                                                style="font-size:11px;">
+                                                QR
+                                            </a>
+
+                                            {{-- BOTÓN MARCAR PAGADO CENTRAL --}}
+                                            <button 
+                                                class="btn btn-success py-0 px-2 btnPagadoCentral"
+                                                style="font-size:11px;"
+                                                data-id="{{ $p->id }}">
+                                                Marcar Pagado
+                                            </button>
+
+                                        @elseif($p->qr_pago_estado === 'distribuidor')
+
+                                            <span class="estado-pago distribuidor">
+                                                Pagado al Distribuidor
+                                            </span>
+
+                                        @elseif($p->qr_pago_estado === 'central')
+
+                                            <span class="estado-pago central">
+                                                Pagado a la Central
+                                            </span>
+
+                                        @endif
+
+                                    @endif
+
+                                </div>  
 
 
                             </div>
@@ -990,6 +1039,19 @@
 /* Oculta la X del InfoWindow */
 .gm-ui-hover-effect {
     display: none !important;
+}
+
+.estado-pago {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.estado-pago.distribuidor {
+    color: #17a2b8; /* celeste */
+}
+
+.estado-pago.central {
+    color: #28a745; /* verde */
 }
 
 </style>
@@ -2809,6 +2871,38 @@ document.addEventListener('change', function(e) {
 
 });
 </script>
+
+
+<script>
+document.querySelectorAll('.btnPagadoCentral').forEach(btn => {
+    btn.addEventListener('click', function () {
+
+        let id = this.dataset.id;
+
+        Swal.fire({
+            title: 'Confirmar pago',
+            text: '¿El cliente pagó directamente a la central?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, confirmar'
+        }).then(result => {
+
+            if (result.isConfirmed) {
+
+                fetch(`/admin/pedidos/${id}/qr-pagado-central`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    }
+                })
+                .then(() => location.reload());
+
+            }
+        });
+    });
+});
+</script>
+
 
 <!-- Modal de llamada de llegada-->
 <div class="modal fade" id="modalLlamada" tabindex="-1" aria-hidden="true">

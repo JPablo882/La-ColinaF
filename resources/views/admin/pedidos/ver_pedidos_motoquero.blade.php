@@ -508,6 +508,38 @@
                         </table>
                         <p class="text-end"><b>Total pedido:</b> Bs {{ number_format($pedido->total_precio, 2) }}</p>
                         <p><b>Método de pago:</b> {{ $pedido->metodo_pago ?? 'No definido' }}</p>
+
+
+
+                        @if(strtolower($pedido->metodo_pago) === 'qr')
+
+                            @if(!$pedido->qr_pago_estado)
+
+                                <button 
+                                    class="btn btn-success btn-sm mt-1 btnPagadoDistribuidor"
+                                    data-id="{{ $pedido->id }}">
+                                    ✔ Marcar como pagado
+                                </button>
+
+                            @elseif($pedido->qr_pago_estado === 'distribuidor')
+
+                                <span class="badge badge-info mt-1">
+                                    QR pagado al distribuidor
+                                </span>
+
+                            @elseif($pedido->qr_pago_estado === 'central')
+
+                                <span class="badge badge-success mt-1">
+                                    QR pagado a la central
+                                </span>
+
+                            @endif
+
+                        @endif
+
+
+
+
                     @endif
                 </div>
             @empty
@@ -2144,6 +2176,38 @@ document.addEventListener('click', function(e){
 
 });
 </script>
+
+
+<script>
+document.querySelectorAll('.btnPagadoDistribuidor').forEach(btn => {
+    btn.addEventListener('click', function () {
+
+        let id = this.dataset.id;
+
+        Swal.fire({
+            title: '¿Confirmar pago?',
+            text: '¿Te pagaron este pedido por QR?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, pagado',
+        }).then(result => {
+
+            if (result.isConfirmed) {
+
+                fetch(`/admin/pedidos/${id}/qr-pagado-distribuidor`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    }
+                })
+                .then(() => location.reload());
+
+            }
+        });
+    });
+});
+</script>
+
 
 
 <!-- 🔍 MODAL IMAGEN GRANDE -->
